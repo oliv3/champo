@@ -10,6 +10,10 @@
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
 -define(POPSIZE, 5000). %% TODO: 100000
 
+%% CPU cooling pauses
+-define(TOS, 10).
+-define(TOM, ?TOS*1000).
+
 %% registered processes
 -define(JUDGE, judge).
 %% -define(MAIN,  ?MODULE).
@@ -55,8 +59,8 @@ receive_result(Ref, Pid) ->
     end.
 
 
-match(0) ->
-    "<- Possible solution";
+match(1) ->
+    "<- Solution";
 match(_) ->
     "".
 
@@ -87,15 +91,16 @@ loop(Pids, Gen, PopSize) ->
     io:format("~n", []),
     NewPids = new_population(Results),
     [Pid ! die || Pid <- Pids],
-    timer:sleep(1000),
+    io:format("[.] Sleeping ~p seconds~n", [?TOS]),
+    timer:sleep(?TOM),
     loop(NewPids, Gen+1, PopSize+?POPSIZE). %% TODO NewPids
 
 top10(List) ->
     {L1, _} = lists:split(10, List),
     L1.
 
-new_population(Results) ->
-    new_population(Results, []).
+new_population(Pop) ->
+    new_population(Pop, []).
 new_population([], Acc) ->
     Acc;
 new_population([{Parent1, _Score1}, {Parent2, _Score2} | Rest], Acc) ->
@@ -223,9 +228,18 @@ match(Words, Dict) ->
     [find_in_dict(Word, Dict) || Word <- Words].
 
 check_sentence(Sentence, Dict) ->
-    Scores = [S || {_Word, S} <- match(Sentence, Dict)],
-    lists:sum(Scores). %% ok. %% TODO score
+    %% NOTE S+1 pour multiplier des ints > 0,
+    %% le score ideal est donc: 1
+    Scores = [S+1 || {_Word, S} <- match(Sentence, Dict)],
+    multiply(Scores).
 
+%% XXX faire un lists:qqc avec un accum
+multiply(Scores) ->
+    multiply(Scores, 1).
+multiply([], Acc) ->
+    Acc;
+multiply([Score|Scores], Acc) ->
+    multiply(Scores, Score*Acc).
 
 %%
 %% generate a random chromosome
