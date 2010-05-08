@@ -8,10 +8,10 @@
 -define(ALPHABET_SIZE, 14). %% real case
 %% -define(ALPHABET_SIZE, 3). %% for testing
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
--define(POPSIZE, 5000). %% TODO: 100000
+-define(POPSIZE, 100000). %% TODO: 100000
 
 %% CPU cooling pauses
--define(TOS, 10).
+-define(TOS, 60).
 -define(TOM, ?TOS*1000).
 
 %% registered processes
@@ -50,7 +50,7 @@ start() ->
     Pids = [new_chrom(C) || C <- Pop],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
     %% register(?MAIN, self()),
-    loop(Pids, 1, ?POPSIZE).
+    loop(Pids, 1).
 
 receive_result(Ref, Pid) ->
     receive
@@ -74,7 +74,7 @@ flatten([Word|Words], Acc) ->
 result(C, Score) ->
     io:format("[C] Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [pp(C), Score, flatten(sentence(C)), match(Score)]).
 
-loop(Pids, Gen, PopSize) ->
+loop(Pids, Gen) ->
     %% 1 ask all chroms to evaluate
     Ref = make_ref(),
     Self = self(),
@@ -84,16 +84,17 @@ loop(Pids, Gen, PopSize) ->
     Results = lists:keysort(2, [receive_result(Ref, Pid) || Pid <- Pids]),
     Top10 = top10(Results),
     %% error_logger:info_msg("[*] Results: ~p~n", [ [result(C, Score) || {C, Score} <- Top10] ]),
-    io:format("[*] Generation: ~p, ~p individuals evaluated~n", [Gen, PopSize]),
+    io:format("[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POPSIZE]),
     %% io:format("[i] ~p processes~n", [length(processes())]),
     io:format("[*] Top 10:~n", []),
     [result(C, Score) || {C, Score} <- Top10],
     io:format("~n", []),
     NewPids = new_population(Results),
     [Pid ! die || Pid <- Pids],
-    io:format("[.] Sleeping ~p seconds~n", [?TOS]),
+    io:format("[.] Sleeping ~p seconds... ", [?TOS]),
     timer:sleep(?TOM),
-    loop(NewPids, Gen+1, PopSize+?POPSIZE). %% TODO NewPids
+    io:format("done.~n", []),
+    loop(NewPids, Gen+1).
 
 top10(List) ->
     {L1, _} = lists:split(10, List),
@@ -312,3 +313,12 @@ test() ->
     {C1, C2} = xover1({P1, P2}),
     io:format("Child1:  ~p~n", [pp(C1)]),
     io:format("Child2:  ~p~n", [pp(C2)]).
+
+
+%%
+%% Mutations
+%%
+
+%% 1. Reverse chromosome
+mut_reverse(C) ->
+    list_to_tuple(lists:reverse(tuple_to_list(C))).
