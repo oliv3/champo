@@ -3,7 +3,7 @@
 
 -compile([export_all]).
 
--export([judge/1, chrom/1]).
+-export([judge/1, chrom/2]).
 
 -define(ALPHABET_SIZE, 14). %% real case
 -define(H_ALPHABET_SIZE, round(?ALPHABET_SIZE/2)).
@@ -18,11 +18,9 @@
 
 %% registered processes
 -define(JUDGE, judge).
-%% -define(MAIN,  ?MODULE).
 
-%% -define(RIDDLE, [
-%% 		 [3, 1, 3, 1], [1, 2, 3] %% caca, abc
-%% 		]).
+-define(NB_MUTATIONS, 3).
+-define(P_MUTATION, 10000). %% 1/10000
 
 -define(RIDDLE, [
 		 [1, 2, 3, 4],
@@ -37,7 +35,7 @@
 		]).
 
 new_chrom(C) ->
-    spawn(?MODULE, chrom, [C]).
+    spawn(?MODULE, chrom, [C, undefined]).
 
 start() ->
     io:format("[+] Starting crypto application: ~p~n", [crypto:start()]),
@@ -51,7 +49,6 @@ start() ->
     %% Pids = [spawn(?MODULE, chrom, [C]) || C <- Pop],
     Pids = [new_chrom(C) || C <- Pop],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
-    %% register(?MAIN, self()),
     loop(Pids, 1).
 
 receive_result(Ref, Pid) ->
@@ -91,7 +88,9 @@ loop(Pids, Gen) ->
     io:format("[*] Top 10:~n", []),
     [result(C, Score) || {C, Score} <- Top10],
     io:format("~n", []),
+
     NewPids = new_population(Results),
+
     [Pid ! die || Pid <- Pids],
     io:format("[.] Sleeping ~p seconds... ", [?TOS]),
     timer:sleep(?TOM),
@@ -116,13 +115,29 @@ new_population([{Parent1, _Score1}, {Parent2, _Score2} | Rest], Acc) ->
     new_population(Rest, [Pid1, Pid2 | Acc]).
     
 
-chrom(C) ->
+chrom(C, Score) ->
     receive
+	{Pid, Ref, evaluate} when Score == undefined ->
+	    S = evaluate(C),
+	    %% error_logger:info_msg("~p evaluated to: ~p~n", [C, S]),
+	    Pid ! {Ref, self(), {C, S}},
+	    chrom(C, S);
+
 	{Pid, Ref, evaluate} ->
-	    Result = evaluate(C),
-	    %% error_logger:info_msg("~p evaluated to: ~p~n", [C, Result]),
-	    Pid ! {Ref, self(), {C, Result}},
-	    chrom(C);
+	    Pid ! {Ref, self(), {C, Score}},
+	    chrom(C, Score);
+
+	{mutate, 0} ->
+	    NewC = mut_reverse(C),
+	    chrom(NewC, undefined);
+
+	{mutate, 1} ->
+	    NewC = mut_split_swap(C),
+	    chrom(NewC, undefined);
+
+	{mutate, 2} ->
+	    NewC = mut_randomize(),
+	    chrom(NewC, undefined);
 
 	die ->
 	    %% io:format("[i] ~p exiting~n", [self()]),
@@ -326,8 +341,12 @@ mut_reverse(C) ->
     list_to_tuple(lists:reverse(tuple_to_list(C))).
 
 %% 2. Split in two then swap
-mut_split(C) ->
+mut_split_swap(C) ->
     {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
     list_to_tuple(Right ++ Left).
+
+%% 3. Randomize
+mut_randomize(C) ->
+    create().
 
 %% TODO 3 & 4 (cf paper notes)
