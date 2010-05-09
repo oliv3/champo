@@ -6,6 +6,8 @@
 -export([judge/1, chrom/1]).
 
 -define(ALPHABET_SIZE, 14). %% real case
+-define(H_ALPHABET_SIZE, round(?ALPHABET_SIZE/2)).
+
 %% -define(ALPHABET_SIZE, 3). %% for testing
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
 -define(POPSIZE, 100000). %% TODO: 100000
@@ -322,3 +324,9 @@ test() ->
 %% 1. Reverse chromosome
 mut_reverse(C) ->
     list_to_tuple(lists:reverse(tuple_to_list(C))).
+
+%% 2. Split in to then swap
+mut_split(C) ->
+    L = tuple_to_list(C),
+    {Left, Right} = lists:split(?H_ALPHABET_SIZE, L),
+    list_to_tuple(Right ++ Left).
