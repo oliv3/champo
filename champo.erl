@@ -338,15 +338,19 @@ test() ->
 
 %% 1. Reverse chromosome
 mut_reverse(C) ->
+    error_logger:info_msg("[!] Reverse chromosome: ~p~n", [pp(C)]),
     list_to_tuple(lists:reverse(tuple_to_list(C))).
 
 %% 2. Split in two then swap
 mut_split_swap(C) ->
+    error_logger:info_msg("[!] Split/Swap chromosome: ~p~n", [pp(C)]),
     {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
     list_to_tuple(Right ++ Left).
 
 %% 3. Randomize
-mut_randomize(C) ->
-    create().
+mut_randomize() ->
+    C = create(),
+    error_logger:info_msg("[!] Randomize chromosome: ~p~n", [pp(C)]),
+    C.
 
 %% TODO 3 & 4 (cf paper notes)
