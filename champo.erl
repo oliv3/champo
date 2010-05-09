@@ -10,7 +10,7 @@
 
 %% -define(ALPHABET_SIZE, 3). %% for testing
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
--define(POP_SIZE, 10). %%100000). %% TODO: 100000
+-define(POP_SIZE, 12). %%100000). %% TODO: 100000
 -define(H_POP_SIZE, round(?POP_SIZE/2)).
 
 %% CPU cooling pauses
@@ -52,9 +52,9 @@ start() ->
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
     loop(Pids, 1).
 
-receive_result(Ref, Pid) ->
+receive_result(Ref) ->
     receive
-	{Ref, Pid, Result} ->
+	{Ref, Result} ->
 	    Result
     end.
 
@@ -71,8 +71,8 @@ flatten([Last], Acc) ->
 flatten([Word|Words], Acc) ->
     flatten(Words, Acc ++ Word ++ " ").
 
-result(C, Score) ->
-    io:format("[C] Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [pp(C), Score, flatten(sentence(C)), match(Score)]).
+result({Pid, C, Score}) ->
+    io:format("[C] ~p Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [Pid, pp(C), Score, flatten(sentence(C)), match(Score)]).
 
 loop(Pids, Gen) ->
     %% Ask all chroms to evaluate
@@ -81,18 +81,25 @@ loop(Pids, Gen) ->
     [Pid ! {Self, Ref, evaluate} || Pid <- Pids],
 
     %% Receive evaluations
-    Results = lists:keysort(2, [receive_result(Ref, Pid) || Pid <- Pids]),
+    Results = lists:keysort(3, [receive_result(Ref) || _Pid <- Pids]),
 
     %% Display the top 10
     Top10 = top10(Results),
     io:format("[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POP_SIZE]),
     io:format("[i] ~p processes~n", [length(processes())]),
     io:format("[*] Top 10:~n", []),
-    [result(C, Score) || {C, Score} <- Top10],
+    [result(T) || T <- Top10],
     io:format("~n", []),
 
+    %% Divide poulation in two
+    {Winners, Losers} = lists:split(?H_POP_SIZE, Results),
+    %% io:format("Pop= ~p~nW= ~p~nL= ~p~n", [Results, Winners, Losers]),
+
+    %% Kill losers
+    [Loser ! die || {Loser, _Alphabet, _Score} <- Losers],
+
     %% Create new population
-    NewPids = new_population(Results),
+    NewPids = new_population(Winners),
 
     %% Sleep for a while to cool the CPU
     io:format("[.] Sleeping ~p seconds... ", [?TOS]),
@@ -106,19 +113,17 @@ top10(List) ->
     {L1, _} = lists:split(10, List),
     L1.
 
-new_population(Pop) ->
-    %% Divide poulation in two
-    {Winners, Losers} = lists:split(?H_POP_SIZE, Pop),
-    io:format("Pop= ~p~nW= ~p~nL= ~p~n", [Pop, Winners, Losers]),
-    %% Kill the losers
-    [Loser ! die || Loser <- Losers],
-
-    %% The new population consists of the winners
-    %% the children created by mating the winners
-    new_population(Winners, Winners).
+new_population(Winners) ->
+    %% io:format("WINNERS mating !~n~p~n", [Winners]),
+    %% The new population consists of the winners plus
+    %% the children created by mating the winners (possibly mutating)
+    WinnersPids = [Pid || {Pid, _Alphabet, _Score} <- Winners],
+    %% io:format("WinnersPids: ~p~n", [WinnersPids]),
+    new_population(Winners, WinnersPids).
 new_population([], Acc) ->
     Acc;
-new_population([{Parent1, _Score1}, {Parent2, _Score2} | Rest], Acc) ->
+new_population([{_ParentPid1, Parent1, _Score1}, {_ParentPid2, Parent2, _Score2} | Rest] = _Chose, Acc) ->
+    %% io:format("new_population ~p~n", [_Chose]),
     {Child1, Child2} = xover1({Parent1, Parent2}),
     Pid1 = new_chrom(Child1),
     Pid2 = new_chrom(Child2),
@@ -128,7 +133,7 @@ new_population([{Parent1, _Score1}, {Parent2, _Score2} | Rest], Acc) ->
     
 
 maybe_mutate(Pid) ->
-    io:format("maybe_mutate(~p)~n", [Pid]),
+    %% io:format("maybe_mutate(~p)~n", [Pid]),
     case crypto:rand_uniform(0, ?P_MUTATION) of
 	0 -> %% TODO 666
 	    mutate(Pid);
@@ -137,7 +142,7 @@ maybe_mutate(Pid) ->
     end.
 
 mutate(Pid) ->
-    Mutation = crypto:random(0, ?NB_MUTATIONS),
+    Mutation = crypto:rand_uniform(0, ?NB_MUTATIONS),
     Pid ! {mutate, Mutation}.
 
 chrom(C, Score) ->
@@ -145,11 +150,11 @@ chrom(C, Score) ->
 	{Pid, Ref, evaluate} when Score == undefined ->
 	    S = evaluate(C),
 	    %% error_logger:info_msg("~p evaluated to: ~p~n", [C, S]),
-	    Pid ! {Ref, self(), {C, S}},
+	    Pid ! {Ref, {self(), C, S}},
 	    chrom(C, S);
 
 	{Pid, Ref, evaluate} ->
-	    Pid ! {Ref, self(), {C, Score}},
+	    Pid ! {Ref, {self(), C, Score}},
 	    chrom(C, Score);
 
 	{mutate, 0} ->
@@ -363,19 +368,21 @@ test() ->
 
 %% 1. Reverse chromosome
 mut_reverse(C) ->
-    error_logger:info_msg("[!] Reverse chromosome: ~p~n", [pp(C)]),
-    list_to_tuple(lists:reverse(tuple_to_list(C))).
+    New = list_to_tuple(lists:reverse(tuple_to_list(C))),
+    %% error_logger:info_msg("[!] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    New.
 
 %% 2. Split in two then swap
 mut_split_swap(C) ->
-    error_logger:info_msg("[!] Split/Swap chromosome: ~p~n", [pp(C)]),
     {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
-    list_to_tuple(Right ++ Left).
+    New = list_to_tuple(Right ++ Left),
+    %% error_logger:info_msg("[!] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    New.
 
 %% 3. Randomize
 mut_randomize() ->
     C = create(),
-    error_logger:info_msg("[!] Randomize chromosome: ~p~n", [pp(C)]),
+    %% error_logger:info_msg("[!] Randomize chromosome: ~p~n", [pp(C)]),
     C.
 
 %% TODO 3 & 4 (cf paper notes)
