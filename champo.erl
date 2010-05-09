@@ -327,6 +327,5 @@ mut_reverse(C) ->
 
 %% 2. Split in two then swap
 mut_split(C) ->
-    L = tuple_to_list(C),
-    {Left, Right} = lists:split(?H_ALPHABET_SIZE, L),
+    {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
     list_to_tuple(Right ++ Left).
