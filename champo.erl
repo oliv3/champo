@@ -10,7 +10,8 @@
 
 %% -define(ALPHABET_SIZE, 3). %% for testing
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
--define(POPSIZE, 100). %%100000). %% TODO: 100000
+-define(POP_SIZE, 10). %%100000). %% TODO: 100000
+-define(H_POP_SIZE, round(?POP_SIZE/2)).
 
 %% CPU cooling pauses
 -define(TOS, 5). %%60).
@@ -25,12 +26,12 @@
 -define(RIDDLE, [
 		 [1, 2, 3, 4],
 		 [2, 5],
-		 [6, 7, 3, 8, 5, 9, 5],
-		 [10, 5, 11, 2, 5, 8],
-		 [2, 5],
+%%		 [6, 7, 3, 8, 5, 9, 5],
+%%		 [10, 5, 11, 2, 5, 8],
+%%		 [2, 5],
 		 [9, 1, 7, 12, 5],
-		 [5, 4, 10, 3, 4],
-		 [8, 5, 2, 6, 13, 5],
+%%		 [5, 4, 10, 3, 4],
+%%		 [8, 5, 2, 6, 13, 5],
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
 
@@ -84,7 +85,7 @@ loop(Pids, Gen) ->
 
     %% Display the top 10
     Top10 = top10(Results),
-    io:format("[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POPSIZE]),
+    io:format("[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POP_SIZE]),
     io:format("[i] ~p processes~n", [length(processes())]),
     io:format("[*] Top 10:~n", []),
     [result(C, Score) || {C, Score} <- Top10],
@@ -107,8 +108,8 @@ top10(List) ->
 
 new_population(Pop) ->
     %% Divide poulation in two
-    {Winners, Losers} = lists:split(2, Pop),
-
+    {Winners, Losers} = lists:split(?H_POP_SIZE, Pop),
+    io:format("Pop= ~p~nW= ~p~nL= ~p~n", [Pop, Winners, Losers]),
     %% Kill the losers
     [Loser ! die || Loser <- Losers],
 
@@ -127,6 +128,7 @@ new_population([{Parent1, _Score1}, {Parent2, _Score2} | Rest], Acc) ->
     
 
 maybe_mutate(Pid) ->
+    io:format("maybe_mutate(~p)~n", [Pid]),
     case crypto:rand_uniform(0, ?P_MUTATION) of
 	0 -> %% TODO 666
 	    mutate(Pid);
@@ -295,7 +297,7 @@ create() ->
     list_to_tuple(AsChars).
 
 population() ->
-    [create() || _ <- lists:seq(1, ?POPSIZE)].
+    [create() || _ <- lists:seq(1, ?POP_SIZE)].
 
 t2b(X) ->
     list_to_binary(tuple_to_list(X)).
