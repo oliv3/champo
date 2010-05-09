@@ -10,17 +10,17 @@
 
 %% -define(ALPHABET_SIZE, 3). %% for testing
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
--define(POPSIZE, 100000). %% TODO: 100000
+-define(POPSIZE, 100). %%100000). %% TODO: 100000
 
 %% CPU cooling pauses
--define(TOS, 60).
+-define(TOS, 5). %%60).
 -define(TOM, ?TOS*1000).
 
 %% registered processes
 -define(JUDGE, judge).
 
 -define(NB_MUTATIONS, 3).
--define(P_MUTATION, 10000). %% 1/10000
+-define(P_MUTATION, 1). %% 10000). %% 1/10000
 
 -define(RIDDLE, [
 		 [1, 2, 3, 4],
@@ -74,27 +74,31 @@ result(C, Score) ->
     io:format("[C] Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [pp(C), Score, flatten(sentence(C)), match(Score)]).
 
 loop(Pids, Gen) ->
-    %% 1 ask all chroms to evaluate
+    %% Ask all chroms to evaluate
     Ref = make_ref(),
     Self = self(),
     [Pid ! {Self, Ref, evaluate} || Pid <- Pids],
 
-    %% 2 receive evaluations
+    %% Receive evaluations
     Results = lists:keysort(2, [receive_result(Ref, Pid) || Pid <- Pids]),
+
+    %% Display the top 10
     Top10 = top10(Results),
-    %% error_logger:info_msg("[*] Results: ~p~n", [ [result(C, Score) || {C, Score} <- Top10] ]),
     io:format("[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POPSIZE]),
-    %% io:format("[i] ~p processes~n", [length(processes())]),
+    io:format("[i] ~p processes~n", [length(processes())]),
     io:format("[*] Top 10:~n", []),
     [result(C, Score) || {C, Score} <- Top10],
     io:format("~n", []),
 
+    %% Create new population
     NewPids = new_population(Results),
 
-    [Pid ! die || Pid <- Pids],
+    %% Sleep for a while to cool the CPU
     io:format("[.] Sleeping ~p seconds... ", [?TOS]),
     timer:sleep(?TOM),
     io:format("done.~n", []),
+
+    %% Start again
     loop(NewPids, Gen+1).
 
 top10(List) ->
@@ -102,18 +106,37 @@ top10(List) ->
     L1.
 
 new_population(Pop) ->
-    new_population(Pop, []).
+    %% Divide poulation in two
+    {Winners, Losers} = lists:split(2, Pop),
+
+    %% Kill the losers
+    [Loser ! die || Loser <- Losers],
+
+    %% The new population consists of the winners
+    %% the children created by mating the winners
+    new_population(Winners, Winners).
 new_population([], Acc) ->
     Acc;
 new_population([{Parent1, _Score1}, {Parent2, _Score2} | Rest], Acc) ->
-    %% TODO: mutations
     {Child1, Child2} = xover1({Parent1, Parent2}),
-    %% Pid1 = spawn(?MODULE, chrom, [Child1]),
-    %% Pid2 = spawn(?MODULE, chrom, [Child2]),
     Pid1 = new_chrom(Child1),
     Pid2 = new_chrom(Child2),
+    maybe_mutate(Pid1),
+    maybe_mutate(Pid2),
     new_population(Rest, [Pid1, Pid2 | Acc]).
     
+
+maybe_mutate(Pid) ->
+    case crypto:rand_uniform(0, ?P_MUTATION) of
+	0 -> %% TODO 666
+	    mutate(Pid);
+	_Other ->
+	    ok
+    end.
+
+mutate(Pid) ->
+    Mutation = crypto:random(0, ?NB_MUTATIONS),
+    Pid ! {mutate, Mutation}.
 
 chrom(C, Score) ->
     receive
