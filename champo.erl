@@ -8,7 +8,7 @@
 %% Idonea's enigma parameters
 -define(ALPHABET_SIZE, 14). %% real case
 -define(MAXWORDLENGTH, 8). %% real case
--define(POP_SIZE, 100000).
+-define(POP_SIZE, 2000).
 
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
