@@ -10,7 +10,7 @@
 
 %% -define(ALPHABET_SIZE, 3). %% for testing
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
--define(POP_SIZE, 12). %%100000). %% TODO: 100000
+-define(POP_SIZE, 10000). %%100000). %% TODO: 100000
 -define(H_POP_SIZE, round(?POP_SIZE/2)).
 
 %% CPU cooling pauses
@@ -21,7 +21,7 @@
 -define(JUDGE, judge).
 
 -define(NB_MUTATIONS, 3).
--define(P_MUTATION, 1). %% 10000). %% 1/10000
+-define(P_MUTATION, 10000).
 
 -define(RIDDLE, [
 		 [1, 2, 3, 4],
