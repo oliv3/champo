@@ -5,12 +5,12 @@
 
 -export([judge/1, chrom/2]).
 
+%% Idonea's enigma parameters
 -define(ALPHABET_SIZE, 14). %% real case
--define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
+-define(MAXWORDLENGTH, 8). %% real case
+-define(POP_SIZE, 100000).
 
-%% -define(ALPHABET_SIZE, 3). %% for testing
--define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
--define(POP_SIZE, 10000). %% TODO: 100000
+-define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% CPU cooling pauses
@@ -21,17 +21,17 @@
 -define(JUDGE, judge).
 
 -define(NB_MUTATIONS, 3).
--define(P_MUTATION, 10000).
+-define(P_MUTATION, 1000). %% 1 chance sur 1000
 
 -define(RIDDLE, [
 		 [1, 2, 3, 4],
 		 [2, 5],
-%%		 [6, 7, 3, 8, 5, 9, 5],
-%%		 [10, 5, 11, 2, 5, 8],
-%%		 [2, 5],
+		 [6, 7, 3, 8, 5, 9, 5],
+		 [10, 5, 11, 2, 5, 8],
+		 [2, 5],
 		 [9, 1, 7, 12, 5],
-%%		 [5, 4, 10, 3, 4],
-%%		 [8, 5, 2, 6, 13, 5],
+		 [5, 4, 10, 3, 4],
+		 [8, 5, 2, 6, 13, 5],
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
 
@@ -39,17 +39,25 @@ new_chrom(C) ->
     spawn(?MODULE, chrom, [C, undefined]).
 
 start() ->
+    %% Start crypto application
     io:format("[+] Starting crypto application: ~p~n", [crypto:start()]),
+
+    %% Load dictionary
     io:format("[+] Loading dictionary: ", []),
     Dict = dict_load(),
     io:format("~p words~n", [length(Dict)]),
+
+    %% Start judge process
     Judge = spawn(?MODULE, judge, [Dict]),
     register(?JUDGE, Judge),
     io:format("[+] Judge pid: ~p~n", [Judge]),
+
+    %% Create initial population
     Pop = population(),
-    %% Pids = [spawn(?MODULE, chrom, [C]) || C <- Pop],
     Pids = [new_chrom(C) || C <- Pop],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
+
+    %% Start GA
     loop(Pids, 1).
 
 receive_result(Ref) ->
@@ -71,7 +79,7 @@ flatten([Last], Acc) ->
 flatten([Word|Words], Acc) ->
     flatten(Words, Acc ++ Word ++ " ").
 
-result({Pid, C, Score}) ->
+display({Pid, C, Score}) ->
     io:format("[C] ~p Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [Pid, pp(C), Score, flatten(sentence(C)), match(Score)]).
 
 loop(Pids, Gen) ->
@@ -81,14 +89,15 @@ loop(Pids, Gen) ->
     [Pid ! {Self, Ref, evaluate} || Pid <- Pids],
 
     %% Receive evaluations
-    Results = lists:keysort(3, [receive_result(Ref) || _Pid <- Pids]),
+    Evaluations = [receive_result(Ref) || _Pid <- Pids],
+    Results = lists:keysort(3, Evaluations),
 
-    %% Display the top 10
+    %% Top 10
     Top10 = top10(Results),
     io:format("[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POP_SIZE]),
     io:format("[i] ~p processes~n", [length(processes())]),
     io:format("[*] Top 10:~n", []),
-    [result(T) || T <- Top10],
+    [display(T) || T <- Top10],
     io:format("~n", []),
 
     %% Divide poulation in two
@@ -96,7 +105,7 @@ loop(Pids, Gen) ->
     %% io:format("Pop= ~p~nW= ~p~nL= ~p~n", [Results, Winners, Losers]),
 
     %% Kill losers
-    [Loser ! die || {Loser, _Alphabet, _Score} <- Losers],
+    [LoserPid ! die || {LoserPid, _Alphabet, _Score} <- Losers],
 
     %% Create new population
     NewPids = new_population(Winners),
@@ -118,6 +127,7 @@ new_population(Winners) ->
     %% The new population consists of the winners plus
     %% the children created by mating the winners (possibly mutating)
     WinnersPids = [Pid || {Pid, _Alphabet, _Score} <- Winners],
+    [maybe_mutate(Pid) || Pid <- WinnersPids],
     %% io:format("WinnersPids: ~p~n", [WinnersPids]),
     new_population(Winners, WinnersPids).
 new_population([], Acc) ->
