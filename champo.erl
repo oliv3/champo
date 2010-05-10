@@ -10,11 +10,11 @@
 
 %% -define(ALPHABET_SIZE, 3). %% for testing
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
--define(POP_SIZE, 10000). %%100000). %% TODO: 100000
+-define(POP_SIZE, 10000). %% TODO: 100000
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% CPU cooling pauses
--define(TOS, 5). %%60).
+-define(TOS, 60).
 -define(TOM, ?TOS*1000).
 
 %% registered processes
@@ -369,20 +369,20 @@ test() ->
 %% 1. Reverse chromosome
 mut_reverse(C) ->
     New = list_to_tuple(lists:reverse(tuple_to_list(C))),
-    %% error_logger:info_msg("[!] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    error_logger:info_msg("[!] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
     New.
 
 %% 2. Split in two then swap
 mut_split_swap(C) ->
     {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
     New = list_to_tuple(Right ++ Left),
-    %% error_logger:info_msg("[!] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    error_logger:info_msg("[!] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
     New.
 
 %% 3. Randomize
 mut_randomize() ->
     C = create(),
-    %% error_logger:info_msg("[!] Randomize chromosome: ~p~n", [pp(C)]),
+    error_logger:info_msg("[!] Randomize chromosome: ~p~n", [pp(C)]),
     C.
 
-%% TODO 3 & 4 (cf paper notes)
+%% TODO more mutations (cf paper notes)
