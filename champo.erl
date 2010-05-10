@@ -6,12 +6,12 @@
 -export([judge/1, chrom/2]).
 
 -define(ALPHABET_SIZE, 14). %% real case
--define(H_ALPHABET_SIZE, round(?ALPHABET_SIZE/2)).
+-define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
 
 %% -define(ALPHABET_SIZE, 3). %% for testing
 -define(MAXWORDLENGTH, 8). %% 4). %% for testing,  8). real case
 -define(POP_SIZE, 10000). %%100000). %% TODO: 100000
--define(H_POP_SIZE, round(?POP_SIZE/2)).
+-define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% CPU cooling pauses
 -define(TOS, 5). %%60).
