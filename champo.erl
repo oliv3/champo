@@ -1,6 +1,11 @@
 -module(champo).
 -author('olivier@biniou.info').
 
+%%
+%% TODO
+%% une roulette pour générer la next gen
+%%
+
 -compile([export_all]).
 
 -export([judge/1, chrom/2]).
@@ -8,13 +13,13 @@
 %% Idonea's enigma parameters
 -define(ALPHABET_SIZE, 14). %% real case
 -define(MAXWORDLENGTH, 8). %% real case
--define(POP_SIZE, 2000).
+-define(POP_SIZE, 6000).
 
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% CPU cooling pauses
--define(TOS, 60).
+-define(TOS, 10).
 -define(TOM, ?TOS*1000).
 
 %% registered processes
@@ -79,8 +84,9 @@ flatten([Last], Acc) ->
 flatten([Word|Words], Acc) ->
     flatten(Words, Acc ++ Word ++ " ").
 
-display({Pid, C, Score}) ->
-    io:format("[C] ~p Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [Pid, pp(C), Score, flatten(sentence(C)), match(Score)]).
+display({_Pid, C, Score}) ->
+    %% io:format("[C] ~p Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [Pid, pp(C), Score, flatten(sentence(C)), match(Score)]).
+    io:format("[C] Alphabet: ~p => ~p ~s(~p)~n", [pp(C), flatten(sentence(C)), match(Score), Score]).
 
 loop(Pids, Gen) ->
     %% Ask all chroms to evaluate
