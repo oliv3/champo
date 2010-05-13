@@ -19,14 +19,14 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 10000).
+-define(POP_SIZE, 200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 %% Mutations
 -define(NB_MUTATIONS, 3).
 -define(P_MUTATION, 1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
--define(TOS, 1*60). %% seconds
+-define(TOS, 60). %% seconds
 -define(TOM, ?TOS*1000).
 
 %% Registered processes
