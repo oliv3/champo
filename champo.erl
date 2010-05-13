@@ -3,31 +3,37 @@
 
 %%
 %% TODO
+%% WTF sur un core 2 utilise que 50% du CPU ?!
+%%
 %% une roulette pour générer la next gen
 %%
+%% save/load d'une population (liste de chroms dans un binary term)
 
--compile([export_all]).
+-compile([export_all]). %% debug
 
 -export([judge/1, chrom/2]).
 
 %% Idonea's enigma parameters
 -define(ALPHABET_SIZE, 14). %% real case
--define(MAXWORDLENGTH, 8). %% real case
--define(POP_SIZE, 6000).
+-define(MAXWORDLENGTH, 8).  %% real case
 
+%% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
+-define(POP_SIZE, 10000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
-
-%% CPU cooling pauses
--define(TOS, 10).
--define(TOM, ?TOS*1000).
-
-%% registered processes
--define(JUDGE, judge).
-
+%% Mutations
 -define(NB_MUTATIONS, 3).
 -define(P_MUTATION, 1000). %% 1 chance sur 1000
 
+%% CPU cooling pauses
+-define(TOS, 1*60). %% seconds
+-define(TOM, ?TOS*1000).
+
+%% Registered processes
+-define(JUDGE, judge).
+
+%% The riddle
+%% http://www.youtube.com/watch?v=5ehHOwmQRxU
 -define(RIDDLE, [
 		 [1, 2, 3, 4],
 		 [2, 5],
@@ -40,8 +46,13 @@
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
 
+%% oliv3
+%% new_chrom(C) ->
+%%     spawn(?MODULE, chrom, [C, undefined]).
+
+%% tidier
 new_chrom(C) ->
-    spawn(?MODULE, chrom, [C, undefined]).
+    spawn(fun () -> (?MODULE):chrom(C, undefined) end).
 
 start() ->
     %% Start crypto application
@@ -53,7 +64,10 @@ start() ->
     io:format("~p words~n", [length(Dict)]),
 
     %% Start judge process
-    Judge = spawn(?MODULE, judge, [Dict]),
+    %% oliv3
+    %% Judge = spawn(?MODULE, judge, [Dict]),
+    %% tidier
+    Judge = spawn(fun () -> (?MODULE):judge(Dict) end),
     register(?JUDGE, Judge),
     io:format("[+] Judge pid: ~p~n", [Judge]),
 
@@ -187,7 +201,10 @@ chrom(C, Score) ->
 
 	die ->
 	    %% io:format("[i] ~p exiting~n", [self()]),
-	    ok
+	    ok;
+	
+	_Other ->
+	    io:format("[?] Oups got other message: ~p~n", [_Other])
     end.
 
 translate(Word, C) ->
@@ -229,13 +246,18 @@ dict_load(File) ->
 %%
 %% ménache dans le dictionnaire, on ne garde
 %% que les mots de taille <= ?MAXWORDLEN
-%% -- One-Liner évidemment
+
+%% oliv3:
+%% menache(Words) ->
+%%     lists:filter(fun(Str) -> length(Str) =< ?MAXWORDLENGTH end, Words).
+%% tidier:
 menache(Words) ->
-    lists:filter(fun(Str) -> length(Str) =< ?MAXWORDLENGTH end, Words).
+    [Str || Str <- Words, length(Str) =< (?MAXWORDLENGTH)].
+
 
 %% diff entre 2 strings
 %% ~= algo de Hamming
-diff(Str1, Str2) when length(Str1) == length(Str2) ->
+diff(Str1, Str2) when length(Str1) =:= length(Str2) ->
     diff(Str1, Str2, 0);
 diff(_Truc1, _Truc2) ->
     undefined.
