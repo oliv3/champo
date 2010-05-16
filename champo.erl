@@ -19,11 +19,11 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 200000).
+-define(POP_SIZE, 100000). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 %% Mutations
 -define(NB_MUTATIONS, 3).
--define(P_MUTATION, 1000). %% 1 chance sur 1000
+-define(P_MUTATION, 2000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
 -define(TOS, 60). %% seconds
@@ -41,10 +41,28 @@
 		 [10, 5, 11, 2, 5, 8],
 		 [2, 5],
 		 [9, 1, 7, 12, 5],
-		 [5, 4, 10, 3, 4],
+		 [5, 4],
+		 [10, 3, 4],
 		 [8, 5, 2, 6, 13, 5],
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
+
+-define(WORST_GUESS_EVER, (
+	  (4*25+1) *
+	  (2*25+1) *
+	  (7*25+1) *
+	  (6*25+1) *
+	  (2*25+1) *
+	  (5*25+1) *
+	  (2*25+1) *
+	  (3*25+1) *
+	  (6*25+1) *
+	  (8*25+1)
+	 )).
+%% -define(EXACT_GUESS, 1). %% une évidence, non ?
+
+worst() ->
+    io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
 
 %% oliv3
 %% new_chrom(C) ->
@@ -100,7 +118,7 @@ flatten([Word|Words], Acc) ->
 
 display({_Pid, C, Score}) ->
     %% io:format("[C] ~p Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [Pid, pp(C), Score, flatten(sentence(C)), match(Score)]).
-    io:format("[C] Alphabet: ~p => ~p ~s(~p)~n", [pp(C), flatten(sentence(C)), match(Score), Score]).
+    io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
 
 loop(Pids, Gen) ->
     %% Ask all chroms to evaluate
@@ -110,7 +128,10 @@ loop(Pids, Gen) ->
 
     %% Receive evaluations
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
-    Results = lists:keysort(3, Evaluations),
+    NegEvals = [neg_score(E) || E <- Evaluations],
+    io:format("NegEvlas= ~p~n", [NegEvals]),
+    Results = lists:reverse(lists:keysort(3, NegEvals)),
+    io:format("Results= ~p~n", [Results]),
 
     %% Top 10
     Top10 = top10(Results),
@@ -141,6 +162,9 @@ loop(Pids, Gen) ->
 top10(List) ->
     {L1, _} = lists:split(10, List),
     L1.
+
+neg_score({Pid, Alphabet, Score}) ->
+    {Pid, Alphabet, ?WORST_GUESS_EVER-Score}.
 
 new_population(Winners) ->
     %% io:format("WINNERS mating !~n~p~n", [Winners]),
