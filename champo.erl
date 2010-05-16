@@ -19,11 +19,11 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 100000). %%200000).
+-define(POP_SIZE, 50000). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 %% Mutations
 -define(NB_MUTATIONS, 3).
--define(P_MUTATION, 2000). %% 1 chance sur 1000
+-define(P_MUTATION, 1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
 -define(TOS, 60). %% seconds
@@ -128,9 +128,14 @@ loop(Pids, Gen) ->
 
     %% Receive evaluations
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
-    NegEvals = [neg_score(E) || E <- Evaluations],
-    io:format("NegEvlas= ~p~n", [NegEvals]),
-    Results = lists:reverse(lists:keysort(3, NegEvals)),
+
+    %% WIP version avec la roulette russe
+    %% NegEvals = [neg_score(E) || E <- Evaluations],
+    %% io:format("NegEvlas= ~p~n", [NegEvals]),
+    %% Results = lists:reverse(lists:keysort(3, NegEvals)),
+
+    %% WIP temp roll-back version sans roulette russe
+    Results = lists:reverse(lists:keysort(3, Evaluations)),
     io:format("Results= ~p~n", [Results]),
 
     %% Top 10
