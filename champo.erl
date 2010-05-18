@@ -19,7 +19,7 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 50000). %%200000).
+-define(POP_SIZE, 20). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 %% Mutations
 -define(NB_MUTATIONS, 3).
@@ -47,6 +47,8 @@
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
 
+%% ************************************* HERE **************************************
+%% TODO la macro WORST(X)
 -define(WORST_GUESS_EVER, (
 	  (4*25+1) *
 	  (2*25+1) *
@@ -394,8 +396,8 @@ xover1({C1, C2}) ->
     %% io:format("xover1: pos= ~p~n", [Rnd]),
     {L1, R1} = erlang:split_binary(Bin1, Rnd),
     {L2, R2} = erlang:split_binary(Bin2, Rnd),
-    NC1 = erlang:concat_binary([L1, R2]),
-    NC2 = erlang:concat_binary([L2, R1]),
+    NC1 = erlang:list_to_binary([L1, R2]),
+    NC2 = erlang:list_to_binary([L2, R1]),
     Child1 = b2t(NC1),
     Child2 = b2t(NC2),
     {Child1, Child2}.
