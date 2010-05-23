@@ -21,8 +21,9 @@
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
 -define(POP_SIZE, 20). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
+
 %% Mutations
--define(NB_MUTATIONS, 3).
+-define(NB_MUTATIONS, 4).
 -define(P_MUTATION, 1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
@@ -227,7 +228,11 @@ chrom(C, Score) ->
 	    chrom(NewC, undefined);
 
 	{mutate, 2} ->
-	    NewC = mut_randomize(),
+	    NewC = mut_randomize_full(),
+	    chrom(NewC, undefined);
+
+	{mutate, 3} ->
+	    NewC = mut_randomize_one(C),
 	    chrom(NewC, undefined);
 
 	die ->
@@ -448,10 +453,19 @@ mut_split_swap(C) ->
     error_logger:info_msg("[!] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
     New.
 
-%% 3. Randomize
-mut_randomize() ->
+%% 3. Randomize full
+mut_randomize_full() ->
     C = create(),
-    error_logger:info_msg("[!] Randomize chromosome: ~p~n", [pp(C)]),
+    error_logger:info_msg("[!] Randomize chromosome full: ~p~n", [pp(C)]),
     C.
+
+%% 4. Radomize only one char
+mut_randomize_one(C) ->
+    Position = crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1,
+    <<NewChar>> = crypto:rand_bytes(1),
+    Char = to_char(NewChar),
+    New = setelement(Position, C, Char),
+    error_logger:info_msg("[!] Randomize chromosome one: ~p -> ~p~n", [pp(C), pp(New)]),
+    New.
 
 %% TODO more mutations (cf paper notes)
