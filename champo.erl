@@ -91,8 +91,7 @@ flatten([Word|Words], Acc) ->
     flatten(Words, Acc ++ Word ++ " ").
 
 display({_Pid, C, Score}) ->
-    %% io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
-    io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), 'TODO', match(Score), Score, ?WORST_GUESS_EVER-Score]).
+    io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(capello:sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
 
 loop(Pids, Gen, RunTime) ->
     Start = now(),

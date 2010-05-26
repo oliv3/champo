@@ -13,7 +13,7 @@
 -include("champo.hrl").
 
 -export([start/0, loop/1, stop/0]).
--export([check/1, two/1]).
+-export([check/1, two/1, sentence/1]).
 
 
 -define(SERVER, ?MODULE).
