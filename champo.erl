@@ -24,10 +24,10 @@
 
 %% Mutations
 -define(NB_MUTATIONS, 5).
--define(P_MUTATION, 1000). %% 1 chance sur 1000
+-define(P_MUTATION, 200). %% 1 chance sur 1000
 
 %% CPU cooling pauses
--define(TOS, 20). %% seconds
+-define(TOS, 30). %% seconds
 -define(TOM, ?TOS*1000).
 
 %% Registered processes
@@ -48,8 +48,6 @@
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
 
-%% ************************************* HERE **************************************
-%% TODO la macro WORST(X)
 -define(WORST(X), (X*25+1)).
 -define(WORST_GUESS_EVER, (
 	  ?WORST(4) *
@@ -73,10 +71,6 @@
 
 worst() ->
     io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
-
-%% oliv3
-%% new_chrom(C) ->
-%%     spawn(?MODULE, chrom, [C, undefined]).
 
 %% tidier
 new_chrom(C) ->
@@ -140,12 +134,12 @@ loop(Pids, Gen) ->
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
 
     %% WIP version avec la roulette russe
-    %% NegEvals = [neg_score(E) || E <- Evaluations],
-    %% io:format("NegEvlas= ~p~n", [NegEvals]),
-    %% Results = lists:reverse(lists:keysort(3, NegEvals)),
+    NegEvals = [neg_score(E) || E <- Evaluations],
+    %% io:format("NegEvals= ~p~n", [NegEvals]),
+    Results = lists:reverse(lists:keysort(3, NegEvals)),
 
     %% WIP temp roll-back version sans roulette russe
-    Results = lists:keysort(3, Evaluations),
+    %% Results = lists:keysort(3, Evaluations),
     %% io:format("Results= ~p~n", [Results]),
 
     %% Top 10
@@ -163,13 +157,18 @@ loop(Pids, Gen) ->
     %% Kill losers
     [LoserPid ! die || {LoserPid, _Alphabet, _Score} <- Losers],
 
+    %% Compute score of all the winners
+    SumScores = sum_scores(Winners),
+    %% io:format("[i] Population score: ~p~n", [SumScores]),
+
     %% Create new population
-    NewPids = new_population(Winners),
+    NewPids = new_population2(?H_POP_SIZE, Winners, SumScores, [Pid || {Pid, _A, _S} <- Winners]),
 
     %% Sleep for a while to cool the CPU
+    timer:sleep(5000), %% io races, let 5 seconds for mutations to occur
     io:format("[.] Sleeping ~p seconds... ", [?TOS]),
-    timer:sleep(?TOM),
-    io:format("done.~n", []),
+    timer:sleep(?TOM-5000),
+    io:format("done.~n~n", []),
 
     %% Start again
     ?MODULE:loop(NewPids, Gen+1).
@@ -181,30 +180,87 @@ top10(List) ->
 neg_score({Pid, Alphabet, Score}) ->
     {Pid, Alphabet, ?WORST_GUESS_EVER-Score}.
 
+%% version avec roulette
+new_population3(_, Parents, _) ->
+    L = [Pid || {Pid, _, _} <- Parents],
+    lists:flatten(lists:duplicate(2, L)).
+
+new_population2(0, _Parents, _MaxScore, Acc) ->
+    Acc;
+new_population2(N, Parents, MaxScore, Acc) ->
+    {Parent1Pid, Chrom1, _S} = roulette(Parents, MaxScore, undefined),
+    {_Parent2Pid, Chrom2, _S2} = roulette(Parents, MaxScore, Parent1Pid),
+    {_, _, MS} = now(),
+    %% io:format("np2(~p), ~p~n", [N, [E || E <- Acc]]),
+    {Child1, Child2} = case MS rem 2 of
+			   0 ->
+			       xover1({Chrom1, Chrom2});
+			   1 ->
+			       xover2({Chrom1, Chrom2})
+		       end,
+    Pid1 = new_chrom(Child1),
+    Pid2 = new_chrom(Child2),
+    maybe_mutate(Pid1),
+    maybe_mutate(Pid2),
+    new_population2(N-2, Parents, MaxScore, [Pid1, Pid2 | Acc]).
+
+roulette(Parents, MaxScore, NotThisPid) ->
+    Score = crypto:rand_uniform(0, MaxScore),
+    {Pid, _A, _S} = This = extract(Parents, Score),
+    if
+	Pid == NotThisPid ->
+	    roulette(Parents, MaxScore, NotThisPid);
+	true ->
+	    This
+    end.
+
+f({_Pid, Alphabet, _Score}) ->
+    pp(Alphabet).
+
+extract(Parents, Score) ->
+    extract(Parents, Score, 0).
+extract([], Score, CurScore) ->
+    io:format("[!] WTF no more parents Score= ~p CurScore= ~p~n", [Score, CurScore]),
+    exit(duergl);
+extract([{_Pid, _A, S} = Element | Parents], Score, CurScore) ->
+    NewScore = CurScore + S,
+    if
+	NewScore >= Score ->
+	    %% io:format("[d] Found element ~p, score ~p -> ~p >= ~p~n~n", [f(Element), S, NewScore, Score]),
+	    Element;
+	true ->
+	    %% io:format("[d] Skipp element ~p, score ~p -> ~p  < ~p~n",   [f(Element), S, NewScore, Score]),
+	    extract(Parents, Score, NewScore)
+    end.
+
 new_population(Winners) ->
     %% io:format("WINNERS mating !~n~p~n", [Winners]),
     %% The new population consists of the winners plus
     %% the children created by mating the winners (possibly mutating)
     WinnersPids = [Pid || {Pid, _Alphabet, _Score} <- Winners],
-    [maybe_mutate(Pid) || Pid <- WinnersPids],
+    %% [maybe_mutate(Pid) || Pid <- WinnersPids],
     %% io:format("WinnersPids: ~p~n", [WinnersPids]),
     new_population(Winners, WinnersPids).
 new_population([], Acc) ->
     Acc;
 new_population([{_ParentPid1, Parent1, _Score1}, {_ParentPid2, Parent2, _Score2} | Rest] = _Chose, Acc) ->
     %% io:format("new_population ~p~n", [_Chose]),
+
+    %% XXX c'est bien la peine de coder xover2 si c'est
+    %% pour ne pas l'utiliser
     {Child1, Child2} = xover1({Parent1, Parent2}),
     Pid1 = new_chrom(Child1),
     Pid2 = new_chrom(Child2),
     maybe_mutate(Pid1),
     maybe_mutate(Pid2),
     new_population(Rest, [Pid1, Pid2 | Acc]).
-    
+
+sum_scores(Pop) ->
+    lists:sum([Score || {_Pid, _Alphabet, Score} <- Pop]).
 
 maybe_mutate(Pid) ->
-    %% io:format("maybe_mutate(~p)~n", [Pid]),
     case crypto:rand_uniform(0, ?P_MUTATION) of
-	0 -> %% TODO 666
+	0 ->
 	    mutate(Pid);
 	_Other ->
 	    ok
@@ -427,7 +483,7 @@ xover2({C1, C2}) ->
     LC2 = tuple_to_list(C2),
 
     First  = crypto:rand_uniform(2, ?ALPHABET_SIZE-2),
-    Second = crypto:rand_uniform(First, ?ALPHABET_SIZE-1),
+    Second = crypto:rand_uniform(First+1, ?ALPHABET_SIZE-1),
 
     %% erf le lame check
     case Second > First of
@@ -435,7 +491,7 @@ xover2({C1, C2}) ->
 	false -> exit(mais_heu)
     end,
 
-    io:format("xover2: ~p / ~p~n", [First, Second]),
+    %% io:format("xover2: ~p / ~p~n", [First, Second]),
 
     {Left1, Rest1} = lists:split(First, LC1),
     {Left2, Rest2} = lists:split(First, LC2),
@@ -475,19 +531,20 @@ test2() ->
 %% 1. Reverse chromosome
 mut_reverse(C) ->
     New = list_to_tuple(lists:reverse(tuple_to_list(C))),
-		 error_logger:info_msg("[!] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
-		 New.
+    io:format("[m] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    New.
+
 %% 2. Split in two then swap
 mut_split_swap(C) ->
     {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
     New = list_to_tuple(Right ++ Left),
-    error_logger:info_msg("[!] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    io:format("[m] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
     New.
 
 %% 3. Randomize full
 mut_randomize_full() ->
     C = create(),
-    error_logger:info_msg("[!] Randomize chromosome full: ~p~n", [pp(C)]),
+    io:format("[m] Randomize chromosome full: ~p~n", [pp(C)]),
     C.
 
 %% 4. Radomize only one char
@@ -496,8 +553,8 @@ mut_randomize_one(C) ->
     <<NewChar>> = crypto:rand_bytes(1),
     Char = to_char(NewChar),
     New = setelement(Position, C, Char),
-    error_logger:info_msg("[!] Randomize chromosome one at pos ~p: ~p -> ~p~n",
-			  [Position, pp(C), pp(New)]),
+    io:format("[m] Randomize chromosome one at pos ~p: ~p -> ~p~n",
+	      [Position, pp(C), pp(New)]),
     New.
 
 %% 5. Swap two characters
@@ -507,8 +564,8 @@ mut_swap_two_genes(C) ->
     Char2 = element(Position2, C),
     Tmp = setelement(Position1, C, Char2),
     New = setelement(Position2, Tmp, Char1),
-    error_logger:info_msg("[!] Swap two genes at pos ~p/~p: ~p -> ~p~n",
-			  [Position1, Position2, pp(C), pp(New)]),
+    io:format("[m] Swap two genes at pos ~p/~p: ~p -> ~p~n",
+	      [Position1, Position2, pp(C), pp(New)]),
     New.
 
 test_mut_swap_two_genes() ->
