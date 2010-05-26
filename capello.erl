@@ -1,7 +1,8 @@
 -module(capello).
 -author('olivier@biniou.info').
 
-%% TODO inserer les mots en <<bin>>
+%% TODO inserer les mots dans une table ETS
+%% ~1s / run pour 100 chroms en liste de strings
 
 %%
 %% Maitre Capello
