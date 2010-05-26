@@ -23,7 +23,7 @@
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% Mutations
--define(NB_MUTATIONS, 4).
+-define(NB_MUTATIONS, 5).
 -define(P_MUTATION, 1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
@@ -63,6 +63,12 @@
 	  (8*25+1)
 	 )).
 %% -define(EXACT_GUESS, 1). %% une évidence, non ?
+
+-define(H1, "         1").
+-define(H2, "12345678901234").
+-define(HL, "--------------").
+
+-define(PUTSTR(X), io:format("~s~n", [X])).
 
 worst() ->
     io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
@@ -233,6 +239,10 @@ chrom(C, Score) ->
 
 	{mutate, 3} ->
 	    NewC = mut_randomize_one(C),
+	    chrom(NewC, undefined);
+
+	{mutate, 4} ->
+	    NewC = mut_swap_two_genes(C),
 	    chrom(NewC, undefined);
 
 	die ->
@@ -489,7 +499,26 @@ mut_randomize_one(C) ->
 			  [Position, pp(C), pp(New)]),
     New.
 
-%% TODO more mutations (cf paper notes)
+%% 5. Swap two characters
+mut_swap_two_genes(C) ->
+    {Position1, Position2} = random2(),
+    Char1 = element(Position1, C),
+    Char2 = element(Position2, C),
+    Tmp = setelement(Position1, C, Char2),
+    New = setelement(Position2, Tmp, Char1),
+    io:format("[!] Swap two genes at pos ~p/~p~n",
+			  [Position1, Position2]),
+    New.
+
+test_mut_swap_two_genes() ->
+    C = create(),
+    N = mut_swap_two_genes(C),
+    ?PUTSTR(?H1),
+    ?PUTSTR(?H2),
+    ?PUTSTR(pp(C)),
+    ?PUTSTR(?HL),
+    ?PUTSTR(pp(N)),
+    ok.
 
 
 split(String, Pos, Delim) ->
@@ -499,11 +528,26 @@ split(String, Pos, Delim) ->
     S.
 
 
--define(H1, "         1").
--define(H2, "12345678901234").
-
 
 h1(Pos) ->
     io:format("~s~n", [split(?H1, Pos, $ )]).
 h2(Pos) ->
     io:format("~s~n", [split(?H2, Pos, $|)]).
+hl(Pos) ->
+    io:format("~s~n", [split(?HL, Pos, $-)]).
+
+
+%%
+%% 2 random integers in [1..?ALPHABET_SIZE]
+%%
+random2() ->
+    Rnd1 = crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1,
+    random2(Rnd1).
+random2(Rnd1) ->
+    Rnd2 = crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1,
+    if
+	Rnd1 == Rnd2 ->
+	    random2(Rnd1);
+	true ->
+	    {Rnd1, Rnd2}
+    end.
