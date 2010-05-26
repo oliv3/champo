@@ -17,12 +17,12 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 100). %% 200). %%200000).
+-define(POP_SIZE, 10000). %% 200). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% Mutations
--define(NB_MUTATIONS, 5).
--define(P_MUTATION, 50). %%1000). %% 1 chance sur 1000
+-define(NB_MUTATIONS, 6).
+-define(P_MUTATION, 1000). %%1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
 -define(TOS, 2). %% 30). %% seconds
@@ -263,6 +263,10 @@ chrom(C, Score) ->
 	    NewC = mut_swap_two_genes(C),
 	    chrom(NewC, undefined);
 
+	{mutate, 5} ->
+	    NewC = mut_shift(C),
+	    chrom(NewC, undefined);
+
 	die ->
 	    %% io:format("[i] ~p exiting~n", [self()]),
 	    ok;
@@ -420,6 +424,14 @@ mut_swap_two_genes(C) ->
     io:format("[m] Swap two genes at pos ~p/~p: ~p -> ~p~n",
 	      [Position1, Position2, pp(C), pp(New)]),
     New.
+
+%% 6. Shift a chromosome
+mut_shift(C) ->
+    [H|T] = tuple_to_list(C),
+    New = list_to_tuple(T++[H]),
+    io:format("[m] Shift chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    New.
+
 
 test_mut_swap_two_genes() ->
     C = create(),
