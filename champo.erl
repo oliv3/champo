@@ -17,7 +17,7 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 400). %% 200). %%200000).
+-define(POP_SIZE, 100). %% 200). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% Mutations
@@ -69,7 +69,7 @@ start() ->
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
 
     %% Start GA
-    loop(Pids, 1).
+    loop(Pids, 1, 0).
 
 receive_result(Ref) ->
     receive
@@ -94,7 +94,9 @@ display({_Pid, C, Score}) ->
     %% io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
     io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), 'TODO', match(Score), Score, ?WORST_GUESS_EVER-Score]).
 
-loop(Pids, Gen) ->
+loop(Pids, Gen, RunTime) ->
+    Start = now(),
+
     %% Ask all chroms to evaluate
     Ref = make_ref(),
     Self = self(),
@@ -127,11 +129,16 @@ loop(Pids, Gen) ->
     %% Create new population
     NewPids = new_population2(?H_POP_SIZE, Winners, SumScores, [Pid || {Pid, _A, _S} <- Winners]),
 
+    Now = now(),
+    ElapsedR = (timer:now_diff(Now, Start)) / 1000000,
+    Elapsed = RunTime + ElapsedR,
+    io:format("[i] Done in ~ps (~ps mean)~n", [ElapsedR, (Elapsed/Gen)]),
+
     %% Sleep for a while to cool the CPU
     timer:sleep(?TOM),
 
     %% Start again
-    ?MODULE:loop(NewPids, Gen+1).
+    ?MODULE:loop(NewPids, Gen+1, Elapsed).
 
 top10(List) ->
     {L1, _} = lists:split(10, List),

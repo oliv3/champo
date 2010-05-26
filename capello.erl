@@ -1,6 +1,8 @@
 -module(capello).
 -author('olivier@biniou.info').
 
+%% TODO inserer les mots en <<bin>>
+
 %%
 %% Maitre Capello
 %%
@@ -14,7 +16,7 @@
 
 
 -define(SERVER, ?MODULE).
--record(state, {dict=undefined}).
+-record(state, {words}).
 
 -define(MAXWORDLENGTH, 8).
 
@@ -39,9 +41,9 @@
 start() ->
     %% Load dictionary
     io:format("[+] Loading dictionary: ", []),
-    Dict = dict_load(),
-    io:format("~p words~n", [length(Dict)]),
-    Pid = spawn(?SERVER, loop, [#state{dict=Dict}]),
+    Words = dict_load(),
+    io:format("~p words~n", [length(Words)]),
+    Pid = spawn(?SERVER, loop, [#state{words=Words}]),
     register(?SERVER, Pid),
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
 
@@ -71,19 +73,18 @@ check(Chrom) ->
 
 %% ------------------------------------------------------------------
 
-loop(#state{dict=Dict} = State) ->
+loop(#state{words=Words} = State) ->
     receive
 	{Pid, {two, Chrom}} ->
 	    Word1 = translate(?WORD2a, Chrom),
 	    Word2 = translate(?WORD2b, Chrom),
-	    InDict = lists:member(Word1, Dict) andalso lists:member(Word2, Dict),
-	    %% io:format("is_viable(~p): ~p, ~p => ~p~n", [pp(Chrom), ?WORD2a, ?WORD2b, InDict]),
-	    Pid ! InDict,
+	    In = lists:member(Word1, Words) andalso lists:member(Word2, Words),
+	    Pid ! In,
 	    loop(State);
 
 	{Pid, {check, Chrom}} ->
 	    Sentence = sentence(Chrom),
-	    Score = check_sentence(Sentence, Dict),
+	    Score = check_sentence(Sentence, Words),
 	    Pid ! Score,
 	    loop(State);
 
