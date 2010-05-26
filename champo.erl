@@ -19,7 +19,7 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 4000). %% 200). %%200000).
+-define(POP_SIZE, 10000). %% 200). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% Mutations
@@ -27,7 +27,7 @@
 -define(P_MUTATION, 1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
--define(TOS, 10). %% seconds
+-define(TOS, 20). %% seconds
 -define(TOM, ?TOS*1000).
 
 %% Registered processes
@@ -507,8 +507,8 @@ mut_swap_two_genes(C) ->
     Char2 = element(Position2, C),
     Tmp = setelement(Position1, C, Char2),
     New = setelement(Position2, Tmp, Char1),
-    error_logger:info_msg("[!] Swap two genes at pos ~p/~p~n",
-			  [Position1, Position2]),
+    error_logger:info_msg("[!] Swap two genes at pos ~p/~p: ~p -> ~p~n",
+			  [Position1, Position2, pp(C), pp(New)]),
     New.
 
 test_mut_swap_two_genes() ->
