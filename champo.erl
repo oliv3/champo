@@ -5,9 +5,9 @@
 %% TODO
 %% WTF sur un core 2 utilise que 50% du CPU ?!
 %%
-%% une roulette pour générer la next gen
-%%
 %% save/load d'une population (liste de chroms dans un binary term)
+%%
+%% modules "chrom" et "judge"
 %%
 -compile([export_all]). %% debug
 
@@ -19,12 +19,12 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 10000). %% 200). %%200000).
+-define(POP_SIZE, 5000). %% 200). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% Mutations
 -define(NB_MUTATIONS, 5).
--define(P_MUTATION, 200). %% 1 chance sur 1000
+-define(P_MUTATION, 1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
 -define(TOS, 30). %% seconds
@@ -33,16 +33,20 @@
 %% Registered processes
 -define(JUDGE, judge).
 
+%% Two-letters words to make a chromosom viable or not
+-define(WORD2a, [2, 5]).
+-define(WORD2b, [5, 4]).
+
 %% The riddle
 %% http://www.youtube.com/watch?v=5ehHOwmQRxU
 -define(RIDDLE, [
 		 [1, 2, 3, 4],
-		 [2, 5],
+		 ?WORD2a,
 		 [6, 7, 3, 8, 5, 9, 5],
 		 [10, 5, 11, 2, 5, 8],
-		 [2, 5],
+		 ?WORD2a,
 		 [9, 1, 7, 12, 5],
-		 [5, 4],
+		 ?WORD2b,
 		 [10, 3, 4],
 		 [8, 5, 2, 6, 13, 5],
 		 [3, 7, 14, 5, 4, 8, 1, 13]
@@ -132,10 +136,9 @@ loop(Pids, Gen) ->
 
     %% Receive evaluations
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
-
-    %% WIP version avec la roulette russe
+    %% Inverse scores
     NegEvals = [neg_score(E) || E <- Evaluations],
-    %% io:format("NegEvals= ~p~n", [NegEvals]),
+    %% Sort by best score descending
     Results = lists:reverse(lists:keysort(3, NegEvals)),
 
     %% WIP temp roll-back version sans roulette russe
@@ -152,23 +155,18 @@ loop(Pids, Gen) ->
 
     %% Divide poulation in two
     {Winners, Losers} = lists:split(?H_POP_SIZE, Results),
-    %% io:format("Pop= ~p~nW= ~p~nL= ~p~n", [Results, Winners, Losers]),
 
     %% Kill losers
     [LoserPid ! die || {LoserPid, _Alphabet, _Score} <- Losers],
 
     %% Compute score of all the winners
     SumScores = sum_scores(Winners),
-    %% io:format("[i] Population score: ~p~n", [SumScores]),
 
     %% Create new population
     NewPids = new_population2(?H_POP_SIZE, Winners, SumScores, [Pid || {Pid, _A, _S} <- Winners]),
 
     %% Sleep for a while to cool the CPU
-    timer:sleep(5000), %% io races, let 5 seconds for mutations to occur
-    io:format("[.] Sleeping ~p seconds... ", [?TOS]),
-    timer:sleep(?TOM-5000),
-    io:format("done.~n~n", []),
+    timer:sleep(?TOM),
 
     %% Start again
     ?MODULE:loop(NewPids, Gen+1).
@@ -181,17 +179,13 @@ neg_score({Pid, Alphabet, Score}) ->
     {Pid, Alphabet, ?WORST_GUESS_EVER-Score}.
 
 %% version avec roulette
-new_population3(_, Parents, _) ->
-    L = [Pid || {Pid, _, _} <- Parents],
-    lists:flatten(lists:duplicate(2, L)).
-
 new_population2(0, _Parents, _MaxScore, Acc) ->
     Acc;
 new_population2(N, Parents, MaxScore, Acc) ->
     {Parent1Pid, Chrom1, _S} = roulette(Parents, MaxScore, undefined),
     {_Parent2Pid, Chrom2, _S2} = roulette(Parents, MaxScore, Parent1Pid),
+
     {_, _, MS} = now(),
-    %% io:format("np2(~p), ~p~n", [N, [E || E <- Acc]]),
     {Child1, Child2} = case MS rem 2 of
 			   0 ->
 			       xover1({Chrom1, Chrom2});
@@ -274,7 +268,6 @@ chrom(C, Score) ->
     receive
 	{Pid, Ref, evaluate} when Score == undefined ->
 	    S = evaluate(C),
-	    %% error_logger:info_msg("~p evaluated to: ~p~n", [C, S]),
 	    Pid ! {Ref, {self(), C, S}},
 	    chrom(C, S);
 
@@ -330,14 +323,18 @@ judge(Dict) ->
 	{Pid, {check, Sentence}} ->
 	    Score = check_sentence(Sentence, Dict),
 	    Pid ! Score,
+	    judge(Dict);
+
+	{Pid, {Ref, two, Alphabet}} ->
+	    Word1 = translate(?WORD2a, Alphabet),
+	    Word2 = translate(?WORD2b, Alphabet),
+	    InDict = lists:member(Word1, Dict) andalso lists:member(Word2, Dict),
+	    %% io:format("is_viable(~p): ~p, ~p => ~p~n", [pp(Alphabet), ?WORD2a, ?WORD2b, InDict]),
+	    Pid ! {Ref, InDict},
 	    judge(Dict)
     end.
 
 %% chargement et parsing du dictionnaire
-%% FMI avec le dico.txt actuel
-%% > length(champo:dict_load()).  
-%% 13215 %% words
-
 dict_load() ->
     dict_load("dico.txt").
 dict_load(File) ->
@@ -347,13 +344,8 @@ dict_load(File) ->
     menache(L2).
 
 %%
-%% ménache dans le dictionnaire, on ne garde
+%% menache dans le dictionnaire, on ne garde
 %% que les mots de taille <= ?MAXWORDLEN
-
-%% oliv3:
-%% menache(Words) ->
-%%     lists:filter(fun(Str) -> length(Str) =< ?MAXWORDLENGTH end, Words).
-%% tidier:
 menache(Words) ->
     [Str || Str <- Words, length(Str) =< (?MAXWORDLENGTH)].
 
@@ -437,6 +429,23 @@ to_char(X) ->
     $a + (X rem 26).
 
 create() ->
+    Chrom = random(),
+    case is_viable(Chrom) of
+	true ->
+	    Chrom;
+	false ->
+	    create()
+    end.
+
+is_viable(Chrom) ->
+    Ref = make_ref(),
+    ?JUDGE ! {self(), {Ref, two, Chrom}},
+    receive
+	{Ref, Result} ->
+	    Result
+    end.
+
+random() ->
     Rnd = crypto:rand_bytes(?ALPHABET_SIZE),
     AsList = binary_to_list(Rnd),
     AsChars = [to_char(C) || C <- AsList],
@@ -459,7 +468,6 @@ pp(X) ->
 %%
 %% mix 2 chromosomes
 %%
-
 %% one-point cross-over
 xover1({C1, C2}) ->
     Bin1 = t2b(C1),
@@ -484,12 +492,6 @@ xover2({C1, C2}) ->
 
     First  = crypto:rand_uniform(2, ?ALPHABET_SIZE-2),
     Second = crypto:rand_uniform(First+1, ?ALPHABET_SIZE-1),
-
-    %% erf le lame check
-    case Second > First of
-	true -> ok;
-	false -> exit(mais_heu)
-    end,
 
     %% io:format("xover2: ~p / ~p~n", [First, Second]),
 
