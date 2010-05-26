@@ -1,56 +1,32 @@
 -module(champo).
 -author('olivier@biniou.info').
 
+-include("champo.hrl").
+
 %%
 %% TODO
 %% WTF sur un core 2 utilise que 50% du CPU ?!
 %%
 %% save/load d'une population (liste de chroms dans un binary term)
 %%
-%% modules "chrom" et "judge"
+%% modules "chrom" "fouras", "config"
 %%
 -compile([export_all]). %% debug
 
--export([judge/1, chrom/2]).
-
-%% Idonea's enigma parameters
--define(ALPHABET_SIZE, 14). %% real case
--define(MAXWORDLENGTH, 8).  %% real case
+-export([chrom/2]).
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 5000). %% 200). %%200000).
+-define(POP_SIZE, 400). %% 200). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% Mutations
 -define(NB_MUTATIONS, 5).
--define(P_MUTATION, 1000). %% 1 chance sur 1000
+-define(P_MUTATION, 50). %%1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
--define(TOS, 30). %% seconds
+-define(TOS, 2). %% 30). %% seconds
 -define(TOM, ?TOS*1000).
-
-%% Registered processes
--define(JUDGE, judge).
-
-%% Two-letters words to make a chromosom viable or not
--define(WORD2a, [2, 5]).
--define(WORD2b, [5, 4]).
-
-%% The riddle
-%% http://www.youtube.com/watch?v=5ehHOwmQRxU
--define(RIDDLE, [
-		 [1, 2, 3, 4],
-		 ?WORD2a,
-		 [6, 7, 3, 8, 5, 9, 5],
-		 [10, 5, 11, 2, 5, 8],
-		 ?WORD2a,
-		 [9, 1, 7, 12, 5],
-		 ?WORD2b,
-		 [10, 3, 4],
-		 [8, 5, 2, 6, 13, 5],
-		 [3, 7, 14, 5, 4, 8, 1, 13]
-		]).
 
 -define(WORST(X), (X*25+1)).
 -define(WORST_GUESS_EVER, (
@@ -84,18 +60,8 @@ start() ->
     %% Start crypto application
     io:format("[+] Starting crypto application: ~p~n", [crypto:start()]),
 
-    %% Load dictionary
-    io:format("[+] Loading dictionary: ", []),
-    Dict = dict_load(),
-    io:format("~p words~n", [length(Dict)]),
-
-    %% Start judge process
-    %% oliv3
-    %% Judge = spawn(?MODULE, judge, [Dict]),
-    %% tidier
-    Judge = spawn(fun () -> (?MODULE):judge(Dict) end),
-    register(?JUDGE, Judge),
-    io:format("[+] Judge pid: ~p~n", [Judge]),
+    %% Start dictionnary module
+    capello:start(),
 
     %% Create initial population
     Pop = population(),
@@ -125,8 +91,8 @@ flatten([Word|Words], Acc) ->
     flatten(Words, Acc ++ Word ++ " ").
 
 display({_Pid, C, Score}) ->
-    %% io:format("[C] ~p Alphabet: ~p Score: ~p Sentence: ~p ~s~n", [Pid, pp(C), Score, flatten(sentence(C)), match(Score)]).
-    io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
+    %% io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
+    io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), 'TODO', match(Score), Score, ?WORST_GUESS_EVER-Score]).
 
 loop(Pids, Gen) ->
     %% Ask all chroms to evaluate
@@ -141,13 +107,9 @@ loop(Pids, Gen) ->
     %% Sort by best score descending
     Results = lists:reverse(lists:keysort(3, NegEvals)),
 
-    %% WIP temp roll-back version sans roulette russe
-    %% Results = lists:keysort(3, Evaluations),
-    %% io:format("Results= ~p~n", [Results]),
-
-    %% Top 10
+    %% Display Top 10
     Top10 = top10(Results),
-    io:format("[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POP_SIZE]),
+    io:format("~n[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POP_SIZE]),
     io:format("[i] ~p processes~n", [length(processes())]),
     io:format("[*] Top 10:~n", []),
     [display(T) || T <- Top10],
@@ -267,7 +229,7 @@ mutate(Pid) ->
 chrom(C, Score) ->
     receive
 	{Pid, Ref, evaluate} when Score == undefined ->
-	    S = evaluate(C),
+	    S = capello:check(C), %% TODO fouras:check
 	    Pid ! {Ref, {self(), C, S}},
 	    chrom(C, S);
 
@@ -303,124 +265,6 @@ chrom(C, Score) ->
 	    io:format("[?] Oups got other message: ~p~n", [_Other])
     end.
 
-translate(Word, C) ->
-    [element(Letter, C) || Letter <- Word].
-
-sentence(C) ->
-    [translate(Word, C) || Word <- ?RIDDLE].
-
-evaluate(C) ->
-    Sentence = sentence(C),
-    %% error_logger:info_msg("Alphabet: ~p, Sentence: ~p~n", [pp(C), Sentence]),
-    ?JUDGE ! {self(), {check, Sentence}},
-    receive
-	Score ->
-	    Score
-    end.
-
-judge(Dict) ->
-    receive
-	{Pid, {check, Sentence}} ->
-	    Score = check_sentence(Sentence, Dict),
-	    Pid ! Score,
-	    judge(Dict);
-
-	{Pid, {Ref, two, Alphabet}} ->
-	    Word1 = translate(?WORD2a, Alphabet),
-	    Word2 = translate(?WORD2b, Alphabet),
-	    InDict = lists:member(Word1, Dict) andalso lists:member(Word2, Dict),
-	    %% io:format("is_viable(~p): ~p, ~p => ~p~n", [pp(Alphabet), ?WORD2a, ?WORD2b, InDict]),
-	    Pid ! {Ref, InDict},
-	    judge(Dict)
-    end.
-
-%% chargement et parsing du dictionnaire
-dict_load() ->
-    dict_load("dico.txt").
-dict_load(File) ->
-    {ok, B} = file:read_file(File),
-    L = binary_to_list(B),
-    L2 = string:tokens(L, [10, 13]),
-    menache(L2).
-
-%%
-%% menache dans le dictionnaire, on ne garde
-%% que les mots de taille <= ?MAXWORDLEN
-menache(Words) ->
-    [Str || Str <- Words, length(Str) =< (?MAXWORDLENGTH)].
-
-
-%% diff entre 2 strings
-%% ~= algo de Hamming
-diff(Str1, Str2) when length(Str1) =:= length(Str2) ->
-    diff(Str1, Str2, 0);
-diff(_Truc1, _Truc2) ->
-    undefined.
-
-diff(Str, Str, Score) ->
-    Score;
-diff([], [], Score) ->
-    Score;
-diff([H1|T1], [H2|T2], Score) ->
-    diff(T1, T2, Score + abs(H1-H2)).
-
-
-%% Truc qui fait des calculs de distance d'un mot vs un dict
-%%
-%% > Dict.
-%% ["abc","hello","world"]
-%% > champo:find_in_dict("zprle", Dict).
-%% {"world",5}
-%% > champo:find_in_dict("prouta", Dict).
-%% undefined
-%%
-%% FIXME could be better, partir avec BEAUCOUP = -1 et tester dessus
-%% ou < si != -1
--define(BEAUCOUP, (($z-$a+1) * ?ALPHABET_SIZE)).
-
-find_in_dict(String, Dict) ->
-    find_in_dict(String, Dict, undefined, ?BEAUCOUP).
-
-find_in_dict(_String, [], undefined, _BestSoFar) ->
-    ?BEAUCOUP;
-find_in_dict(_String, [], BestWord, BestSoFar) ->
-    {BestWord, BestSoFar};
-find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
-    Score = diff(String, Word),
-    case Score of
-	0 ->
-	    {Word, 0};
-	S when S < BestSoFar ->
-	    find_in_dict(String, Words, Word, S);
-	_Other ->
-	    find_in_dict(String, Words, BestWord, BestSoFar)
-    end.
-
-
-%% match a list of words vs a dict
-%%
-%% > Dict.
-%% ["abc","hello","world"]
-%% > Words = ["helli", "world", "absz"].
-%% ["helli","world","absz"]
-%% > champo:match(Words, Dict).         
-%% [{"hello",6},{"world",0},undefined]
-match(Words, Dict) ->
-    [find_in_dict(Word, Dict) || Word <- Words].
-
-check_sentence(Sentence, Dict) ->
-    %% NOTE S+1 pour multiplier des ints > 0,
-    %% le score ideal est donc: 1
-    Scores = [S+1 || {_Word, S} <- match(Sentence, Dict)],
-    multiply(Scores).
-
-%% XXX faire un lists:qqc avec un accum
-multiply(Scores) ->
-    multiply(Scores, 1).
-multiply([], Acc) ->
-    Acc;
-multiply([Score|Scores], Acc) ->
-    multiply(Scores, Score*Acc).
 
 %%
 %% generate a random chromosome
@@ -438,12 +282,13 @@ create() ->
     end.
 
 is_viable(Chrom) ->
-    Ref = make_ref(),
-    ?JUDGE ! {self(), {Ref, two, Chrom}},
-    receive
-	{Ref, Result} ->
-	    Result
-    end.
+    %%Ref = make_ref(),
+    capello:two(Chrom). %% will return true or false
+    %% ?JUDGE ! {self(), {Ref, two, Chrom}},
+    %% receive
+    %% 	{Ref, Result} ->
+    %% 	    Result
+    %% end.
 
 random() ->
     Rnd = crypto:rand_bytes(?ALPHABET_SIZE),

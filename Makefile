@@ -1,4 +1,4 @@
-all: champo.beam
+all: champo.beam capello.beam
 
 %.beam: %.erl
 	erlc +native $<
