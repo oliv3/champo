@@ -10,8 +10,7 @@
 -include("champo.hrl").
 
 -export([start/0, loop/1, stop/0]).
--export([check/1]).
--export([two/1]).
+-export([check/1, two/1]).
 
 
 -define(SERVER, ?MODULE).
@@ -82,7 +81,7 @@ loop(#state{dict=Dict} = State) ->
 	    Pid ! InDict,
 	    loop(State);
 
-	{Pid, {check, Chrom}} -> %% TODO dans fouras
+	{Pid, {check, Chrom}} ->
 	    Sentence = sentence(Chrom),
 	    Score = check_sentence(Sentence, Dict),
 	    Pid ! Score,
@@ -171,6 +170,7 @@ find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
     end.
 
 
+
 %% match a list of words vs a dict
 %%
 %% > Dict.
@@ -182,6 +182,14 @@ find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
 match(Words, Dict) ->
     [find_in_dict(Word, Dict) || Word <- Words].
 
+
+check_sentence(Sentence, Dict) ->
+    %% NOTE S+1 pour multiplier des ints > 0,
+    %% le score ideal est donc: 1
+    Scores = [S+1 || {_Word, S} <- match(Sentence, Dict)],
+    multiply(Scores).
+
+
 %% XXX faire un lists:qqc avec un accum
 multiply(Scores) ->
     multiply(Scores, 1).
@@ -189,9 +197,3 @@ multiply([], Acc) ->
     Acc;
 multiply([Score|Scores], Acc) ->
     multiply(Scores, Score*Acc).
-
-check_sentence(Sentence, Dict) ->
-    %% NOTE S+1 pour multiplier des ints > 0,
-    %% le score ideal est donc: 1
-    Scores = [S+1 || {_Word, S} <- match(Sentence, Dict)],
-    multiply(Scores).

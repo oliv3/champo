@@ -229,7 +229,7 @@ mutate(Pid) ->
 chrom(C, Score) ->
     receive
 	{Pid, Ref, evaluate} when Score == undefined ->
-	    S = capello:check(C), %% TODO fouras:check
+	    S = capello:check(C),
 	    Pid ! {Ref, {self(), C, S}},
 	    chrom(C, S);
 
