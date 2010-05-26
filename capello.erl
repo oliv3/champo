@@ -19,10 +19,6 @@
 -define(SERVER, ?MODULE).
 -record(state, {words}).
 
--define(MAXWORDLENGTH, 8).
-
-%% TODO move the checking code to module (pere) "fouras"
-
 %% The riddle
 %% http://www.youtube.com/watch?v=5ehHOwmQRxU
 -define(RIDDLE, [
@@ -37,10 +33,11 @@
 		 [8, 5, 2, 6, 13, 5],
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
+%% Therefore we set
+-define(MAXWORDLENGTH, 8).
 
 
 start() ->
-    %% Load dictionary
     io:format("[+] Loading dictionary: ", []),
     Words = dict_load(),
     io:format("~p words~n", [length(Words)]),
@@ -49,6 +46,7 @@ start() ->
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
 
 
+%% not used yet
 stop() ->
     ?SERVER ! {self(), stop},
     receive
@@ -105,7 +103,6 @@ dict_load(File) ->
     L2 = string:tokens(L, [10, 13]),
     menache(L2).
 
-%%
 %% menache dans le dictionnaire, on ne garde
 %% que les mots de taille <= ?MAXWORDLEN
 menache(Words) ->
@@ -118,13 +115,6 @@ translate(Word, Chrom) ->
 %% translate the whole riddle
 sentence(Chrom) ->
     [translate(Word, Chrom) || Word <- ?RIDDLE].
-
-
-
-
-
-
-%% TODO dans fouras
 
 %% diff entre 2 strings
 %% ~= algo de Hamming
@@ -171,8 +161,6 @@ find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
 	    find_in_dict(String, Words, BestWord, BestSoFar)
     end.
 
-
-
 %% match a list of words vs a dict
 %%
 %% > Dict.
@@ -184,18 +172,12 @@ find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
 match(Words, Dict) ->
     [find_in_dict(Word, Dict) || Word <- Words].
 
-
+%% Translate the riddle then returns the score
 check_sentence(Sentence, Dict) ->
     %% NOTE S+1 pour multiplier des ints > 0,
     %% le score ideal est donc: 1
     Scores = [S+1 || {_Word, S} <- match(Sentence, Dict)],
     multiply(Scores).
 
-
-%% XXX faire un lists:qqc avec un accum
 multiply(Scores) ->
-    multiply(Scores, 1).
-multiply([], Acc) ->
-    Acc;
-multiply([Score|Scores], Acc) ->
-    multiply(Scores, Score*Acc).
+    lists:foldr(fun(Elem, Acc) -> Elem * Acc end, 1, Scores).
