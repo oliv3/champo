@@ -8,7 +8,7 @@
 %% une roulette pour générer la next gen
 %%
 %% save/load d'une population (liste de chroms dans un binary term)
-
+%%
 -compile([export_all]). %% debug
 
 -export([judge/1, chrom/2]).
@@ -19,7 +19,7 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 20). %%200000).
+-define(POP_SIZE, 200). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% Mutations
@@ -27,7 +27,7 @@
 -define(P_MUTATION, 1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
--define(TOS, 60). %% seconds
+-define(TOS, 10). %% seconds
 -define(TOM, ?TOS*1000).
 
 %% Registered processes
@@ -138,8 +138,8 @@ loop(Pids, Gen) ->
     %% Results = lists:reverse(lists:keysort(3, NegEvals)),
 
     %% WIP temp roll-back version sans roulette russe
-    Results = lists:reverse(lists:keysort(3, Evaluations)),
-    io:format("Results= ~p~n", [Results]),
+    Results = lists:keysort(3, Evaluations),
+    %% io:format("Results= ~p~n", [Results]),
 
     %% Top 10
     Top10 = top10(Results),
@@ -165,7 +165,7 @@ loop(Pids, Gen) ->
     io:format("done.~n", []),
 
     %% Start again
-    loop(NewPids, Gen+1).
+    ?MODULE:loop(NewPids, Gen+1).
 
 top10(List) ->
     {L1, _} = lists:split(10, List),
@@ -399,6 +399,9 @@ xover1({C1, C2}) ->
     Bin2 = t2b(C2),
     Rnd = crypto:rand_uniform(1, ?ALPHABET_SIZE),
     %% io:format("xover1: pos= ~p~n", [Rnd]),
+    %% h1(Rnd), h2(Rnd),
+    %% io:format("~s~n", [split(pp(C1), Rnd, $|)]),
+    %% io:format("~s~n", [split(pp(C2), Rnd, $|)]),
     {L1, R1} = erlang:split_binary(Bin1, Rnd),
     {L2, R2} = erlang:split_binary(Bin2, Rnd),
     NC1 = erlang:list_to_binary([L1, R2]),
@@ -407,25 +410,35 @@ xover1({C1, C2}) ->
     Child2 = b2t(NC2),
     {Child1, Child2}.
 
-%% two-points cross-over
-%% XXX Broken, do NOT use yet
-broken_xover2({C1, C2}) ->
-    _Bin1 = t2b(C1),
-    _Bin2 = t2b(C2),
-    Rnd1 = crypto:rand_uniform(1, ?ALPHABET_SIZE-1),
-    Rnd2 = crypto:rand_uniform(1, ?ALPHABET_SIZE),
-    io:format("xover2: ~p / ~p~n", [Rnd1, Rnd2]),
-    {C1, C2}. %% TODO finish
+%% two-point cross-over
+xover2({C1, C2}) ->
+    LC1 = tuple_to_list(C1),
+    LC2 = tuple_to_list(C2),
 
+    First  = crypto:rand_uniform(2, ?ALPHABET_SIZE-2),
+    Second = crypto:rand_uniform(First, ?ALPHABET_SIZE-1),
 
-%% XXX broken
-test2() ->
-    {P1, P2} = {create(), create()},
-    io:format("Parent1: ~p~n", [pp(P1)]),
-    io:format("Parent2: ~p~n", [pp(P2)]),
-    {C1, C2} = broken_xover2({P1, P2}),
-    io:format("Child1:  ~p~n", [pp(C1)]),
-    io:format("Child2:  ~p~n", [pp(C2)]).    
+    %% erf le lame check
+    case Second > First of
+	true -> ok;
+	false -> exit(mais_heu)
+    end,
+
+    io:format("xover2: ~p / ~p~n", [First, Second]),
+
+    {Left1, Rest1} = lists:split(First, LC1),
+    {Left2, Rest2} = lists:split(First, LC2),
+
+    Delta = Second - First,
+
+    {Middle1, Right1} = lists:split(Delta, Rest1),
+    {Middle2, Right2} = lists:split(Delta, Rest2),
+
+    Child1 = list_to_tuple(Left1 ++ Middle2 ++ Right1),
+    Child2 = list_to_tuple(Left2 ++ Middle1 ++ Right2),
+
+    {Child1, Child2}.
+
 
 test() ->
     {P1, P2} = {create(), create()},
@@ -436,6 +449,14 @@ test() ->
     io:format("Child2:  ~p~n", [pp(C2)]).
 
 
+test2() ->
+    {P1, P2} = {create(), create()},
+    io:format("Parent1: ~p~n", [pp(P1)]),
+    io:format("Parent2: ~p~n", [pp(P2)]),
+    {C1, C2} = xover2({P1, P2}),
+    io:format("Child1:  ~p~n", [pp(C1)]),
+    io:format("Child2:  ~p~n", [pp(C2)]).
+
 %%
 %% Mutations
 %%
@@ -443,9 +464,8 @@ test() ->
 %% 1. Reverse chromosome
 mut_reverse(C) ->
     New = list_to_tuple(lists:reverse(tuple_to_list(C))),
-    error_logger:info_msg("[!] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
-    New.
-
+		 error_logger:info_msg("[!] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+		 New.
 %% 2. Split in two then swap
 mut_split_swap(C) ->
     {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
@@ -465,7 +485,25 @@ mut_randomize_one(C) ->
     <<NewChar>> = crypto:rand_bytes(1),
     Char = to_char(NewChar),
     New = setelement(Position, C, Char),
-    error_logger:info_msg("[!] Randomize chromosome one: ~p -> ~p~n", [pp(C), pp(New)]),
+    error_logger:info_msg("[!] Randomize chromosome one at pos ~p: ~p -> ~p~n",
+			  [Position, pp(C), pp(New)]),
     New.
 
 %% TODO more mutations (cf paper notes)
+
+
+split(String, Pos, Delim) ->
+    {L, R} = lists:split(Pos, String),
+    S = io_lib:format("~s~c~s", [L, Delim, R]),
+    %% lists:flatten(S).
+    S.
+
+
+-define(H1, "         1").
+-define(H2, "12345678901234").
+
+
+h1(Pos) ->
+    io:format("~s~n", [split(?H1, Pos, $ )]).
+h2(Pos) ->
+    io:format("~s~n", [split(?H2, Pos, $|)]).
