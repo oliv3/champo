@@ -19,7 +19,7 @@
 
 %% GA parameters
 -define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 200). %%200000).
+-define(POP_SIZE, 4000). %% 200). %%200000).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 %% Mutations
@@ -50,17 +50,18 @@
 
 %% ************************************* HERE **************************************
 %% TODO la macro WORST(X)
+-define(WORST(X), (X*25+1)).
 -define(WORST_GUESS_EVER, (
-	  (4*25+1) *
-	  (2*25+1) *
-	  (7*25+1) *
-	  (6*25+1) *
-	  (2*25+1) *
-	  (5*25+1) *
-	  (2*25+1) *
-	  (3*25+1) *
-	  (6*25+1) *
-	  (8*25+1)
+	  ?WORST(4) *
+	  ?WORST(2) *
+	  ?WORST(7) *
+	  ?WORST(6) *
+	  ?WORST(2) *
+	  ?WORST(5) *
+	  ?WORST(2) *
+	  ?WORST(3) *
+	  ?WORST(6) *
+	  ?WORST(8)
 	 )).
 %% -define(EXACT_GUESS, 1). %% une évidence, non ?
 
@@ -506,7 +507,7 @@ mut_swap_two_genes(C) ->
     Char2 = element(Position2, C),
     Tmp = setelement(Position1, C, Char2),
     New = setelement(Position2, Tmp, Char1),
-    io:format("[!] Swap two genes at pos ~p/~p~n",
+    error_logger:info_msg("[!] Swap two genes at pos ~p/~p~n",
 			  [Position1, Position2]),
     New.
 
