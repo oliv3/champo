@@ -39,8 +39,8 @@
 
 start() ->
     io:format("[+] Loading dictionary: ", []),
-    Words = dict_load(),
-    io:format("~p words~n", [dict:size(Words)]),
+    {Words, N} = dict_load(),
+    io:format("~p words~n", [N]),
     Pid = spawn(?SERVER, loop, [#state{words=Words}]),
     register(?SERVER, Pid),
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
@@ -103,7 +103,7 @@ dict_load(File) ->
     L = binary_to_list(B),
     L2 = string:tokens(L, [10, 13]),
     menache(L2),
-    build_dict(L2).
+    {build_dict(L2), length(L2)}.
 
 build_dict(Words) ->
     Dict = dict:new(),
