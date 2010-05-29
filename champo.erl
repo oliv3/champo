@@ -24,10 +24,10 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 100). %% 200). %%200000).
+-define(POP_SIZE, 1000). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -75,6 +75,8 @@ start() ->
     Pop = population(),
     Pids = [new_chrom(C) || C <- Pop],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
+
+    io:format("[i] main loop pid: ~p~n", [self()]),
 
     %% Start GA
     loop(Pids, 1, 0).
@@ -125,12 +127,6 @@ loop(Pids, Gen, RunTime) ->
     [display(T) || T <- Top10],
     io:format("~n", []),
 
-    %% Display Worst 10
-    Worst10 = worst10(Results),
-    io:format("[*] Worst 10:~n", []),
-    [display(T) || T <- Worst10],
-    io:format("~n", []),
-
     %% Divide poulation in two
     {Winners, Losers} = lists:split(?H_POP_SIZE, Results),
 
@@ -158,10 +154,6 @@ top10(List) ->
     {L1, _} = lists:split(10, List),
     L1.
 
-%% XXX might be buggy
-worst10(List) ->
-    {L1, _} = lists:split(10, lists:reverse(List)),
-    lists:reverse(L1).
 
 neg_score({Pid, Alphabet, Score}) ->
     {Pid, Alphabet, ?WORST_GUESS_EVER-Score}.
