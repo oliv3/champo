@@ -34,7 +34,6 @@
 -define(TOS, 2). %% 30). %% seconds
 -define(TOM, ?TOS*1000).
 
--define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 -define(WORST(X), (X*25+1)).

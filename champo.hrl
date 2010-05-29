@@ -4,4 +4,5 @@
 
 %% Idonea's enigma parameters
 -define(ALPHABET_SIZE, 14).
+-define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
 
