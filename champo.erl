@@ -3,9 +3,12 @@
 
 -include("champo.hrl").
 
-%% TODO afficher le Worst 10 aussi
-
-%% TODO create() genere N chars uniques (pas de doublons)
+%% Nombre de solutions à ce pb: 26^14
+%%
+%% > math:pow(26,14).
+%% 6.450997470329715e19
+%%
+%% ce qui fait... beaucoup :)
 
 %%
 %% TODO
@@ -103,6 +106,10 @@ flatten([Word|Words], Acc) ->
 display({_Pid, C, Score}) ->
     io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(capello:sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
 
+ts() ->
+    {_Date, {Hour, Min, Sec}} = calendar:now_to_datetime(erlang:now()),
+    io_lib:format("~2B:~2.10.0B:~2.10.0B", [Hour, Min, Sec]).
+
 loop(Pids, Gen, RunTime) ->
     Start = now(),
 
@@ -142,7 +149,7 @@ loop(Pids, Gen, RunTime) ->
     Now = now(),
     ElapsedR = (timer:now_diff(Now, Start)) / 1000000,
     Elapsed = RunTime + ElapsedR,
-    io:format("[i] Done in ~ps (~ps mean)~n", [ElapsedR, (Elapsed/Gen)]),
+    io:format("[i] ~s, done in ~ps (~ps mean)~n", [ts(), ElapsedR, (Elapsed/Gen)]),
 
     %% Sleep for a while to cool the CPU
     timer:sleep(?TOM),
