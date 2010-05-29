@@ -3,30 +3,39 @@
 
 -include("champo.hrl").
 
+%% TODO afficher le Worst 10 aussi
+
+%% TODO create() genere N chars uniques (pas de doublons)
+
 %%
 %% TODO
 %% WTF sur un core 2 utilise que 50% du CPU ?!
 %%
 %% save/load d'une population (liste de chroms dans un binary term)
 %%
-%% modules "chrom" "fouras", "config"
+%% modules "chrom" "config"
 %%
+%% Lors du display des stats/time, rajouter le timestamp / human readable
+%% eg ala syslog
+%%
+
 -compile([export_all]). %% debug
 
 -export([chrom/2]).
 
 %% GA parameters
--define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
--define(POP_SIZE, 10000). %% 200). %%200000).
--define(H_POP_SIZE, (?POP_SIZE bsr 1)).
+-define(POP_SIZE, 100). %% 200). %%200000).
 
 %% Mutations
+-define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
--define(P_MUTATION, 1000). %%1000). %% 1 chance sur 1000
 
 %% CPU cooling pauses
 -define(TOS, 2). %% 30). %% seconds
 -define(TOM, ?TOS*1000).
+
+-define(H_ALPHABET_SIZE, (?ALPHABET_SIZE bsr 1)).
+-define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 -define(WORST(X), (X*25+1)).
 -define(WORST_GUESS_EVER, (
@@ -111,9 +120,16 @@ loop(Pids, Gen, RunTime) ->
     %% Display Top 10
     Top10 = top10(Results),
     io:format("~n[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POP_SIZE]),
-    io:format("[i] ~p processes~n", [length(processes())]),
+
+    io:format("[i] ~p processes~n~n", [length(processes())]),
     io:format("[*] Top 10:~n", []),
     [display(T) || T <- Top10],
+    io:format("~n", []),
+
+    %% Display Worst 10
+    Worst10 = worst10(Results),
+    io:format("[*] Worst 10:~n", []),
+    [display(T) || T <- Worst10],
     io:format("~n", []),
 
     %% Divide poulation in two
@@ -142,6 +158,11 @@ loop(Pids, Gen, RunTime) ->
 top10(List) ->
     {L1, _} = lists:split(10, List),
     L1.
+
+%% XXX might be buggy
+worst10(List) ->
+    {L1, _} = lists:split(10, lists:reverse(List)),
+    lists:reverse(L1).
 
 neg_score({Pid, Alphabet, Score}) ->
     {Pid, Alphabet, ?WORST_GUESS_EVER-Score}.
