@@ -34,13 +34,13 @@
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
 %% Therefore we set
--define(MAXWORDLENGTH, 8).
-
+-define(MAX_WORD_LENGTH, 8).
+%% -define(LENGTHS, (lists:seq(2, ?MAX_WORD_LENGTH))). %% [2,3,4,5,6,7,8]).
 
 start() ->
     io:format("[+] Loading dictionary: ", []),
     Words = dict_load(),
-    io:format("~p words~n", [length(Words)]),
+    io:format("~p words~n", [dict:size(Words)]),
     Pid = spawn(?SERVER, loop, [#state{words=Words}]),
     register(?SERVER, Pid),
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
@@ -77,7 +77,8 @@ loop(#state{words=Words} = State) ->
 	{Pid, {two, Chrom}} ->
 	    Word1 = translate(?WORD2a, Chrom),
 	    Word2 = translate(?WORD2b, Chrom),
-	    In = lists:member(Word1, Words) andalso lists:member(Word2, Words),
+	    {ok, Twos} = dict:find(2, Words),
+	    In = lists:member(Word1, Twos) andalso lists:member(Word2, Twos),
 	    Pid ! In,
 	    loop(State);
 
@@ -101,12 +102,24 @@ dict_load(File) ->
     {ok, B} = file:read_file(File),
     L = binary_to_list(B),
     L2 = string:tokens(L, [10, 13]),
-    menache(L2).
+    menache(L2),
+    build_dict(L2).
+
+build_dict(Words) ->
+    Dict = dict:new(),
+    insert(Words, Dict).
+
+insert([], Dict) ->
+    Dict;
+insert([Word|Words], Dict) ->
+    Len = length(Word),
+    NewDict = dict:append(Len, Word, Dict),
+    insert(Words, NewDict).
 
 %% menache dans le dictionnaire, on ne garde
-%% que les mots de taille <= ?MAXWORDLEN
+%% que les mots de taille >= 2 et <= ?MAX_WORD_LENGTH
 menache(Words) ->
-    [Str || Str <- Words, length(Str) =< ?MAXWORDLENGTH].
+    [Str || Str <- Words, length(Str) >= 2 andalso length(Str) =< ?MAX_WORD_LENGTH].
 
 %% translate a word to french
 translate(Word, Chrom) ->
@@ -131,14 +144,6 @@ diff([H1|T1], [H2|T2], Score) ->
     diff(T1, T2, Score + abs(H1-H2)).
 
 %% Truc qui fait des calculs de distance d'un mot vs un dict
-%%
-%% > Dict.
-%% ["abc","hello","world"]
-%% > champo:find_in_dict("zprle", Dict).
-%% {"world",5}
-%% > champo:find_in_dict("prouta", Dict).
-%% undefined
-%%
 %% FIXME could be better, partir avec BEAUCOUP = -1 et tester dessus
 %% ou < si != -1
 -define(BEAUCOUP, (($z-$a+1) * ?ALPHABET_SIZE)).
@@ -170,7 +175,12 @@ find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
 %% > champo:match(Words, Dict).         
 %% [{"hello",6},{"world",0},undefined]
 match(Words, Dict) ->
-    [find_in_dict(Word, Dict) || Word <- Words].
+    [find_in_dict0(Word, Dict) || Word <- Words].
+
+find_in_dict0(Word, Dict) ->
+    Len = length(Word),
+    Words = dict:fetch(Len, Dict),
+    find_in_dict(Word, Words).
 
 %% Translate the riddle then returns the score
 check_sentence(Sentence, Dict) ->
