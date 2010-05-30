@@ -17,7 +17,7 @@
 
 
 -define(SERVER, ?MODULE).
--record(state, {words}).
+-record(state, {words, twos}).
 
 %% The riddle
 %% http://www.youtube.com/watch?v=5ehHOwmQRxU
@@ -35,13 +35,14 @@
 		]).
 %% Therefore we set
 -define(MAX_WORD_LENGTH, 8).
-%% -define(LENGTHS, (lists:seq(2, ?MAX_WORD_LENGTH))). %% [2,3,4,5,6,7,8]).
+
 
 start() ->
     io:format("[+] Loading dictionary: ", []),
     {Words, N} = dict_load(),
     io:format("~p words~n", [N]),
-    Pid = spawn(?SERVER, loop, [#state{words=Words}]),
+    {ok, Twos} = dict:find(2, Words),
+    Pid = spawn(?SERVER, loop, [#state{words=Words, twos=Twos}]),
     register(?SERVER, Pid),
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
 
@@ -72,12 +73,11 @@ check(Chrom) ->
 
 %% ------------------------------------------------------------------
 
-loop(#state{words=Words} = State) ->
+loop(#state{words=Words, twos=Twos} = State) ->
     receive
 	{Pid, {two, Chrom}} ->
 	    Word1 = translate(?WORD2a, Chrom),
 	    Word2 = translate(?WORD2b, Chrom),
-	    {ok, Twos} = dict:find(2, Words),
 	    In = lists:member(Word1, Twos) andalso lists:member(Word2, Twos),
 	    Pid ! In,
 	    loop(State);
