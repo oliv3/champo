@@ -320,6 +320,16 @@ is_viable(Chrom) ->
     %% end.
 
 random() ->
+    random(?ALPHABET_SIZE, [], 26, lists:seq($a, $z)).
+random(0, Acc, _N, _S) ->
+    list_to_tuple(Acc);
+random(Size, Acc, N, Chars) ->
+    Pos = crypto:rand_uniform(0, N) + 1,
+    Elem = lists:nth(Pos, Chars),
+    NewChars = Chars -- [Elem],
+    random(Size-1, [Elem|Acc], N-1, NewChars).
+
+old_random() ->
     Rnd = crypto:rand_bytes(?ALPHABET_SIZE),
     AsList = binary_to_list(Rnd),
     AsChars = [to_char(C) || C <- AsList],
