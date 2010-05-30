@@ -27,14 +27,14 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 100). %% 200). %%200000).
+-define(POP_SIZE, 100000). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 2). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 1000). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
--define(TOS, 2). %% 30). %% seconds
+-define(TOS, 20). %% 30). %% seconds
 -define(TOM, ?TOS*1000).
 
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
@@ -107,7 +107,7 @@ display({_Pid, C, Score}) ->
     io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(capello:sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
 
 ts() ->
-    {_Date, {Hour, Min, Sec}} = calendar:now_to_datetime(erlang:now()),
+    {_Date, {Hour, Min, Sec}} = calendar:local_time(),
     io_lib:format("~2B:~2.10.0B:~2.10.0B", [Hour, Min, Sec]).
 
 loop(Pids, Gen, RunTime) ->
@@ -311,13 +311,7 @@ create() ->
     end.
 
 is_viable(Chrom) ->
-    %%Ref = make_ref(),
-    capello:two(Chrom). %% will return true or false
-    %% ?JUDGE ! {self(), {Ref, two, Chrom}},
-    %% receive
-    %% 	{Ref, Result} ->
-    %% 	    Result
-    %% end.
+    capello:three(Chrom). %% will return true or false
 
 random() ->
     random(?ALPHABET_SIZE, [], 26, lists:seq($a, $z)).

@@ -1,6 +1,8 @@
 -module(capello).
 -author('olivier@biniou.info').
 
+%% TODO une table ETS 'threes' pour lookup des mots de 3 lettres
+
 %% TODO inserer les mots dans une table ETS
 %% ~1s / run pour 100 chroms en liste de strings
 
@@ -13,23 +15,23 @@
 -include("champo.hrl").
 
 -export([start/0, loop/1, stop/0]).
--export([check/1, two/1, sentence/1]).
+-export([check/1, three/1, sentence/1]).
 
 
 -define(SERVER, ?MODULE).
--record(state, {words, twos}).
+-record(state, {words, threes}).
 
 %% The riddle
 %% http://www.youtube.com/watch?v=5ehHOwmQRxU
 -define(RIDDLE, [
 		 [1, 2, 3, 4],
-		 ?WORD2a,
+		 [2, 5],
 		 [6, 7, 3, 8, 5, 9, 5],
 		 [10, 5, 11, 2, 5, 8],
-		 ?WORD2a,
+		 [2, 5],
 		 [9, 1, 7, 12, 5],
-		 ?WORD2b,
-		 [10, 3, 4],
+		 [5, 4],
+		 ?WORD3,
 		 [8, 5, 2, 6, 13, 5],
 		 [3, 7, 14, 5, 4, 8, 1, 13]
 		]).
@@ -41,8 +43,8 @@ start() ->
     io:format("[+] Loading dictionary: ", []),
     {Words, N} = dict_load(),
     io:format("~p words~n", [N]),
-    {ok, Twos} = dict:find(2, Words),
-    Pid = spawn(?SERVER, loop, [#state{words=Words, twos=Twos}]),
+    {ok, Threes} = dict:find(3, Words),
+    Pid = spawn(?SERVER, loop, [#state{words=Words, threes=Threes}]),
     register(?SERVER, Pid),
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
 
@@ -56,8 +58,8 @@ stop() ->
     end.
 
 
-two(Chrom) ->
-    ?SERVER ! {self(), {two, Chrom}},
+three(Chrom) ->
+    ?SERVER ! {self(), {three, Chrom}},
     receive
 	Result ->
 	    Result
@@ -73,12 +75,11 @@ check(Chrom) ->
 
 %% ------------------------------------------------------------------
 
-loop(#state{words=Words, twos=Twos} = State) ->
+loop(#state{words=Words, threes=Threes} = State) ->
     receive
-	{Pid, {two, Chrom}} ->
-	    Word1 = translate(?WORD2a, Chrom),
-	    Word2 = translate(?WORD2b, Chrom),
-	    In = lists:member(Word1, Twos) andalso lists:member(Word2, Twos),
+	{Pid, {three, Chrom}} ->
+	    Word = translate(?WORD3, Chrom),
+	    In = lists:member(Word, Threes),
 	    Pid ! In,
 	    loop(State);
 
