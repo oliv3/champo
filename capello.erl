@@ -177,6 +177,9 @@ find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
 match(Words, Dict) ->
     [find_in_dict0(Word, Dict) || Word <- Words].
 
+%% TODO mettre l'enigme au format {Len, [Letters]}
+%% pour eviter l'appel a length a chaque fois
+%% (et dans la version ETS, taper dans la bonne table)
 find_in_dict0(Word, Dict) ->
     Len = length(Word),
     Words = dict:fetch(Len, Dict),

@@ -27,10 +27,10 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 1000). %% 200). %%200000).
+-define(POP_SIZE, 100). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 2). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -149,7 +149,7 @@ loop(Pids, Gen, RunTime) ->
     Now = now(),
     ElapsedR = (timer:now_diff(Now, Start)) / 1000000,
     Elapsed = RunTime + ElapsedR,
-    io:format("[i] ~s, done in ~ps (~ps mean)~n", [ts(), ElapsedR, (Elapsed/Gen)]),
+    io:format("~n[i] ~s, done in ~ps (~ps mean)~n", [ts(), ElapsedR, (Elapsed/Gen)]),
 
     %% Sleep for a while to cool the CPU
     timer:sleep(?TOM),
@@ -414,23 +414,26 @@ test2() ->
 %% Mutations
 %%
 
+%% -define(MUT(F,A), io:format(F, A)).
+-define(MUT(F,A), io:format(".", [])).
+
 %% 1. Reverse chromosome
 mut_reverse(C) ->
     New = list_to_tuple(lists:reverse(tuple_to_list(C))),
-    io:format("[m] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    ?MUT("[m] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
     New.
 
 %% 2. Split in two then swap
 mut_split_swap(C) ->
     {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
     New = list_to_tuple(Right ++ Left),
-    io:format("[m] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    ?MUT("[m] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
     New.
 
 %% 3. Randomize full
 mut_randomize_full() ->
     C = create(),
-    io:format("[m] Randomize chromosome full: ~p~n", [pp(C)]),
+    ?MUT("[m] Randomize chromosome full: ~p~n", [pp(C)]),
     C.
 
 %% 4. Radomize only one char
@@ -439,8 +442,8 @@ mut_randomize_one(C) ->
     <<NewChar>> = crypto:rand_bytes(1),
     Char = to_char(NewChar),
     New = setelement(Position, C, Char),
-    io:format("[m] Randomize chromosome one at pos ~p: ~p -> ~p~n",
-	      [Position, pp(C), pp(New)]),
+    ?MUT("[m] Randomize chromosome one at pos ~p: ~p -> ~p~n",
+	 [Position, pp(C), pp(New)]),
     New.
 
 %% 5. Swap two characters
@@ -450,15 +453,15 @@ mut_swap_two_genes(C) ->
     Char2 = element(Position2, C),
     Tmp = setelement(Position1, C, Char2),
     New = setelement(Position2, Tmp, Char1),
-    io:format("[m] Swap two genes at pos ~p/~p: ~p -> ~p~n",
-	      [Position1, Position2, pp(C), pp(New)]),
+    ?MUT("[m] Swap two genes at pos ~p/~p: ~p -> ~p~n",
+	 [Position1, Position2, pp(C), pp(New)]),
     New.
 
 %% 6. Shift a chromosome
 mut_shift(C) ->
     [H|T] = tuple_to_list(C),
     New = list_to_tuple(T++[H]),
-    io:format("[m] Shift chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
+    ?MUT("[m] Shift chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
     New.
 
 
