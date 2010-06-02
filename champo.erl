@@ -313,6 +313,12 @@ create() ->
 is_viable(Chrom) ->
     capello:three(Chrom). %% will return true or false
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% TODO -- HERE
+%% Ici hardcoder "amon" en début de string
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 random() ->
     random(?ALPHABET_SIZE, [], 26, lists:seq($a, $z)).
 random(0, Acc, _N, _S) ->
@@ -322,12 +328,6 @@ random(Size, Acc, N, Chars) ->
     Elem = lists:nth(Pos, Chars),
     NewChars = Chars -- [Elem],
     random(Size-1, [Elem|Acc], N-1, NewChars).
-
-old_random() ->
-    Rnd = crypto:rand_bytes(?ALPHABET_SIZE),
-    AsList = binary_to_list(Rnd),
-    AsChars = [to_char(C) || C <- AsList],
-    list_to_tuple(AsChars).
 
 population() ->
     [create() || _ <- lists:seq(1, ?POP_SIZE)].
