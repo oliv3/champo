@@ -80,19 +80,17 @@ loop(#state{words=Words, threes=Threes} = State) ->
 	{Pid, {three, Chrom}} ->
 	    Word = translate(?WORD3, Chrom),
 	    In = lists:member(Word, Threes),
-	    Pid ! In,
-	    loop(State);
+	    Pid ! In;
 
 	{Pid, {check, Chrom}} ->
 	    Sentence = sentence(Chrom),
 	    Score = check_sentence(Sentence, Words),
-	    Pid ! Score,
-	    loop(State);
+	    Pid ! Score;
 
 	Msg ->
-	    io:format("~p got message: ~p~n", [?SERVER, Msg]),
-	    loop(State)
-    end.
+	    io:format("~p got message: ~p~n", [?SERVER, Msg])
+    end,
+    ?MODULE:loop(State).
 
 %% ------------------------------------------------------------------
 
