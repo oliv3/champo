@@ -27,14 +27,14 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 100000). %% 200). %%200000).
+-define(POP_SIZE, 20000). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 1000). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
--define(TOS, 20). %% 30). %% seconds
+-define(TOS, 5). %% 30). %% seconds
 -define(TOM, ?TOS*1000).
 
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
@@ -58,7 +58,11 @@
 -define(H2, "12345678901234").
 -define(HL, "--------------").
 
+-define(TOP, 15). %% Top N display
+
 -define(PUTSTR(X), io:format("~s~n", [X])).
+
+-define(HINT, "noma"). %% "amon" reversed
 
 worst() ->
     io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
@@ -120,21 +124,25 @@ loop(Pids, Gen, RunTime) ->
 
     %% Receive evaluations
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
+
+
     %% Inverse scores
+    %% XXX WHY THE FUCK ? On sort par score croissant est c'est marre
+    %% En fait non on a basoin du score reversed pour l'algo de la roulette
     NegEvals = [neg_score(E) || E <- Evaluations],
     %% Sort by best score descending
     Results = lists:reverse(lists:keysort(3, NegEvals)),
 
-    %% Display Top 10
-    Top10 = top10(Results),
+    %% Display Top N
+    Top = top(Results),
     io:format("~n[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POP_SIZE]),
-
     io:format("[i] ~p processes~n~n", [length(processes())]),
-    io:format("[*] Top 10:~n", []),
-    [display(T) || T <- Top10],
+    io:format("[*] Top ~p:~n", [?TOP]),
+    [display(T) || T <- Top],
     io:format("~n", []),
 
     %% Divide poulation in two
+    %% TODO ? garder 25% et regénérer 75% ?
     {Winners, Losers} = lists:split(?H_POP_SIZE, Results),
 
     %% Kill losers
@@ -157,8 +165,8 @@ loop(Pids, Gen, RunTime) ->
     %% Start again
     ?MODULE:loop(NewPids, Gen+1, Elapsed).
 
-top10(List) ->
-    {L1, _} = lists:split(10, List),
+top(List) ->
+    {L1, _} = lists:split(?TOP, List),
     L1.
 
 
@@ -289,7 +297,7 @@ chrom(C, Score) ->
 	die ->
 	    %% io:format("[i] ~p exiting~n", [self()]),
 	    ok;
-	
+
 	_Other ->
 	    io:format("[?] Oups got other message: ~p~n", [_Other])
     end.
@@ -313,16 +321,10 @@ create() ->
 is_viable(Chrom) ->
     capello:three(Chrom). %% will return true or false
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%
-%% TODO -- HERE
-%% Ici hardcoder "amon" en début de string
-%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 random() ->
-    random(?ALPHABET_SIZE, [], 26, lists:seq($a, $z)).
+    random(?ALPHABET_SIZE-length(?HINT), ?HINT, 26-length(?HINT), lists:seq($a, $z) -- ?HINT).
 random(0, Acc, _N, _S) ->
-    list_to_tuple(Acc);
+    list_to_tuple(lists:reverse(Acc));
 random(Size, Acc, N, Chars) ->
     Pos = crypto:rand_uniform(0, N) + 1,
     Elem = lists:nth(Pos, Chars),
@@ -388,19 +390,19 @@ xover2({C1, C2}) ->
 
 
 test() ->
-    {P1, P2} = {create(), create()},
+    {P1, P2} = T1 = {create(), create()},
     io:format("Parent1: ~p~n", [pp(P1)]),
     io:format("Parent2: ~p~n", [pp(P2)]),
-    {C1, C2} = xover1({P1, P2}),
+    {C1, C2} = xover1(T1),
     io:format("Child1:  ~p~n", [pp(C1)]),
     io:format("Child2:  ~p~n", [pp(C2)]).
 
 
 test2() ->
-    {P1, P2} = {create(), create()},
+    {P1, P2} = T1 = {create(), create()},
     io:format("Parent1: ~p~n", [pp(P1)]),
     io:format("Parent2: ~p~n", [pp(P2)]),
-    {C1, C2} = xover2({P1, P2}),
+    {C1, C2} = xover2(T1),
     io:format("Child1:  ~p~n", [pp(C1)]),
     io:format("Child2:  ~p~n", [pp(C2)]).
 

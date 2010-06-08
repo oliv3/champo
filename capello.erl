@@ -14,8 +14,11 @@
 %%
 -include("champo.hrl").
 
+-compile([export_all]).
+
 -export([start/0, loop/1, stop/0]).
--export([check/1, three/1, sentence/1]).
+-export([check/1, sentence/1]).
+-export([three/1]).
 
 
 -define(SERVER, ?MODULE).
@@ -42,8 +45,8 @@
 start() ->
     io:format("[+] Loading dictionary: ", []),
     {Words, N} = dict_load(),
-    io:format("~p words~n", [N]),
     {ok, Threes} = dict:find(3, Words),
+    io:format("~p words (~p of 3 letters)~n", [N, length(Threes)]),
     Pid = spawn(?SERVER, loop, [#state{words=Words, threes=Threes}]),
     register(?SERVER, Pid),
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
