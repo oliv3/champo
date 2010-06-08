@@ -477,11 +477,14 @@ hl(Pos) ->
 %%
 %% take 2 random -different- integers in [1..?ALPHABET_SIZE]
 %%
+rnd_pos() ->
+    crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1.
+
 random2() ->
-    Rnd1 = crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1,
+    Rnd1 = rnd_pos(),
     random2(Rnd1).
 random2(Rnd1) ->
-    Rnd2 = crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1,
+    Rnd2 = rnd_pos(),
     if
 	Rnd1 == Rnd2 ->
 	    random2(Rnd1);
