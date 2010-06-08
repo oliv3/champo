@@ -27,7 +27,7 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 20000). %% 200). %%200000).
+-define(POP_SIZE, 10000). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
@@ -95,7 +95,8 @@ receive_result(Ref) ->
     end.
 
 
-match(1) ->
+%% match(1) ->
+match(4) -> %% Don't ask me why it is not 1 as expected :)
     "<- Solution";
 match(_) ->
     "".
