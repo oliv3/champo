@@ -475,7 +475,7 @@ hl(Pos) ->
 
 
 %%
-%% 2 random integers in [1..?ALPHABET_SIZE]
+%% take 2 random -different- integers in [1..?ALPHABET_SIZE]
 %%
 random2() ->
     Rnd1 = crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1,
