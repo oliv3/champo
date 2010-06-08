@@ -150,7 +150,7 @@ loop(Pids, Gen, RunTime) ->
     SumScores = sum_scores(Winners),
 
     %% Create new population
-    NewPids = new_population2(?H_POP_SIZE, Winners, SumScores, [Pid || {Pid, _A, _S} <- Winners]),
+    NewPids = new_population(?H_POP_SIZE, Winners, SumScores, [Pid || {Pid, _A, _S} <- Winners]),
 
     %% Stats
     Now = now(),
@@ -175,9 +175,9 @@ neg_score({Pid, Alphabet, Score}) ->
 
 
 %% version avec roulette
-new_population2(0, _Parents, _MaxScore, Acc) ->
+new_population(0, _Parents, _MaxScore, Acc) ->
     Acc;
-new_population2(N, Parents, MaxScore, Acc) ->
+new_population(N, Parents, MaxScore, Acc) ->
     {Parent1Pid, Chrom1, _S} = roulette(Parents, MaxScore, undefined),
     {_Parent2Pid, Chrom2, _S2} = roulette(Parents, MaxScore, Parent1Pid),
 
@@ -192,7 +192,7 @@ new_population2(N, Parents, MaxScore, Acc) ->
     Pid2 = new_chrom(Child2),
     maybe_mutate(Pid1),
     maybe_mutate(Pid2),
-    new_population2(N-2, Parents, MaxScore, [Pid1, Pid2 | Acc]).
+    new_population(N-2, Parents, MaxScore, [Pid1, Pid2 | Acc]).
 
 
 roulette(Parents, MaxScore, NotThisPid) ->
