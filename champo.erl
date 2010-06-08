@@ -125,11 +125,9 @@ loop(Pids, Gen, RunTime) ->
     %% Receive evaluations
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
 
-
     %% Inverse scores
-    %% XXX WHY THE FUCK ? On sort par score croissant est c'est marre
-    %% En fait non on a basoin du score reversed pour l'algo de la roulette
     NegEvals = [neg_score(E) || E <- Evaluations],
+
     %% Sort by best score descending
     Results = lists:reverse(lists:keysort(3, NegEvals)),
 
@@ -154,6 +152,7 @@ loop(Pids, Gen, RunTime) ->
     %% Create new population
     NewPids = new_population2(?H_POP_SIZE, Winners, SumScores, [Pid || {Pid, _A, _S} <- Winners]),
 
+    %% Stats
     Now = now(),
     ElapsedR = (timer:now_diff(Now, Start)) / 1000000,
     Elapsed = RunTime + ElapsedR,
@@ -165,6 +164,7 @@ loop(Pids, Gen, RunTime) ->
     %% Start again
     ?MODULE:loop(NewPids, Gen+1, Elapsed).
 
+
 top(List) ->
     {L1, _} = lists:split(?TOP, List),
     L1.
@@ -172,6 +172,7 @@ top(List) ->
 
 neg_score({Pid, Alphabet, Score}) ->
     {Pid, Alphabet, ?WORST_GUESS_EVER-Score}.
+
 
 %% version avec roulette
 new_population2(0, _Parents, _MaxScore, Acc) ->
@@ -193,6 +194,7 @@ new_population2(N, Parents, MaxScore, Acc) ->
     maybe_mutate(Pid2),
     new_population2(N-2, Parents, MaxScore, [Pid1, Pid2 | Acc]).
 
+
 roulette(Parents, MaxScore, NotThisPid) ->
     Score = crypto:rand_uniform(0, MaxScore),
     {Pid, _A, _S} = This = extract(Parents, Score),
@@ -203,8 +205,10 @@ roulette(Parents, MaxScore, NotThisPid) ->
 	    This
     end.
 
+
 f({_Pid, Alphabet, _Score}) ->
     pp(Alphabet).
+
 
 extract(Parents, Score) ->
     extract(Parents, Score, 0).
@@ -222,30 +226,10 @@ extract([{_Pid, _A, S} = Element | Parents], Score, CurScore) ->
 	    extract(Parents, Score, NewScore)
     end.
 
-new_population(Winners) ->
-    %% io:format("WINNERS mating !~n~p~n", [Winners]),
-    %% The new population consists of the winners plus
-    %% the children created by mating the winners (possibly mutating)
-    WinnersPids = [Pid || {Pid, _Alphabet, _Score} <- Winners],
-    %% [maybe_mutate(Pid) || Pid <- WinnersPids],
-    %% io:format("WinnersPids: ~p~n", [WinnersPids]),
-    new_population(Winners, WinnersPids).
-new_population([], Acc) ->
-    Acc;
-new_population([{_ParentPid1, Parent1, _Score1}, {_ParentPid2, Parent2, _Score2} | Rest] = _Chose, Acc) ->
-    %% io:format("new_population ~p~n", [_Chose]),
-
-    %% XXX c'est bien la peine de coder xover2 si c'est
-    %% pour ne pas l'utiliser
-    {Child1, Child2} = xover1({Parent1, Parent2}),
-    Pid1 = new_chrom(Child1),
-    Pid2 = new_chrom(Child2),
-    maybe_mutate(Pid1),
-    maybe_mutate(Pid2),
-    new_population(Rest, [Pid1, Pid2 | Acc]).
 
 sum_scores(Pop) ->
     lists:sum([Score || {_Pid, _Alphabet, Score} <- Pop]).
+
 
 maybe_mutate(Pid) ->
     case crypto:rand_uniform(0, ?P_MUTATION) of
@@ -255,9 +239,11 @@ maybe_mutate(Pid) ->
 	    ok
     end.
 
+
 mutate(Pid) ->
     Mutation = crypto:rand_uniform(0, ?NB_MUTATIONS),
     Pid ! {mutate, Mutation}.
+
 
 chrom(C, Score) ->
     receive
