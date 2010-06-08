@@ -318,6 +318,9 @@ random(Size, Acc, N, Chars) ->
     random(Size-1, [Elem|Acc], N-1, NewChars).
 
 population() ->
+    %% TODO generer une population unique ie la avec ce code
+    %% on peut avoir 2x le meme chromosome -oui meme si c'est statistiquement
+    %% tendu- ce serait bien de partir sur une base de chroms uniques
     [create() || _ <- lists:seq(1, ?POP_SIZE)].
 
 t2b(X) ->
