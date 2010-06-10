@@ -1,9 +1,8 @@
 -module(capello).
 -author('olivier@biniou.info').
 
-%% TODO une table ETS 'threes' pour lookup des mots de 3 lettres
-
-%% TODO inserer les mots dans une table ETS
+%% TODO inserer les mots dans N tables ETS
+%% eg une table ETS '3' pour lookup des mots de 3 lettres
 %% ~1s / run pour 100 chroms en liste de strings
 
 %%
@@ -52,11 +51,11 @@ start() ->
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
 
 
-%% not used yet
 stop() ->
-    ?SERVER ! {self(), stop},
+    Ref = make_ref(),
+    ?SERVER ! {self(), Ref, stop},
     receive
-	ok ->
+	{Ref, stopped} ->
 	    ok
     end.
 
@@ -90,6 +89,9 @@ loop(#state{words=Words, threes=Threes} = State) ->
 	    Score = check_sentence(Sentence, Words),
 	    Pid ! Score;
 
+	{Pid, Ref, stop} ->
+	    Pid ! {Ref, stopped};
+
 	Msg ->
 	    io:format("~p got message: ~p~n", [?SERVER, Msg])
     end,
@@ -103,7 +105,7 @@ dict_load() ->
 dict_load(File) ->
     {ok, B} = file:read_file(File),
     L = binary_to_list(B),
-    L2 = string:tokens(L, [10, 13]),
+    L2 = string:tokens(L, [10, 13, $-, $', $ ]),
     menache(L2),
     {build_dict(L2), length(L2)}.
 

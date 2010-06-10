@@ -27,7 +27,7 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 30000). %% 200). %%200000).
+-define(POP_SIZE, 10000). %%30000). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
@@ -83,10 +83,21 @@ start() ->
     Pids = [new_chrom(C) || C <- Pop],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
 
+    register(?MODULE, self()),
     io:format("[i] main loop pid: ~p~n", [self()]),
 
     %% Start GA
     loop(Pids, 1, 0).
+
+
+stop() ->
+    Ref = make_ref(),
+    ?MODULE ! {self(), Ref, stop},
+    receive
+	{Ref, stopped} ->
+	    capello:stop()
+    end.
+
 
 receive_result(Ref) ->
     receive
@@ -162,8 +173,23 @@ loop(Pids, Gen, RunTime) ->
     %% Sleep for a while to cool the CPU
     timer:sleep(?TOM),
 
-    %% Start again
-    ?MODULE:loop(NewPids, Gen+1, Elapsed).
+    case do_stop() of
+	true ->
+	    ok;
+	false ->
+	    %% Start again
+	    ?MODULE:loop(NewPids, Gen+1, Elapsed)
+    end.
+
+
+do_stop() ->
+    receive
+	{Pid, Ref, stop} ->
+	    Pid ! {Ref, stopped},
+	    true
+    after 0 ->
+	    false
+    end.
 
 
 top(List) ->
@@ -305,11 +331,13 @@ create() ->
 	    create()
     end.
 
-is_viable(Chrom) ->
-    capello:three(Chrom). %% will return true or false
+is_viable(_Chrom) ->
+    capello:three(_Chrom). %% will return true or false
+    %% true.
 
 random() ->
-    random(?ALPHABET_SIZE-length(?HINT), ?HINT, 26-length(?HINT), lists:seq($a, $z) -- ?HINT).
+    %% random(?ALPHABET_SIZE-length(?HINT), ?HINT, 26-length(?HINT), lists:seq($a, $z) -- ?HINT).
+    random(?ALPHABET_SIZE, [], 26, lists:seq($a, $z)).
 random(0, Acc, _N, _S) ->
     list_to_tuple(lists:reverse(Acc));
 random(Size, Acc, N, Chars) ->
