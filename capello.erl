@@ -1,9 +1,13 @@
 -module(capello).
 -author('olivier@biniou.info').
 
+%% TODO version intermediaire avec le dict, coder la longueur
+%% avant ie {7, [6, 7, 3, 8, 5, 9, 5]}
+
 %% TODO inserer les mots dans N tables ETS
 %% eg une table ETS '3' pour lookup des mots de 3 lettres
 %% ~1s / run pour 100 chroms en liste de strings
+%% + faire les lookups ETS en asynchrone
 
 %%
 %% Maitre Capello
@@ -106,8 +110,12 @@ dict_load(File) ->
     {ok, B} = file:read_file(File),
     L = binary_to_list(B),
     L2 = string:tokens(L, [10, 13, $-, $', $ ]),
-    menache(L2),
-    {build_dict(L2), length(L2)}.
+    L3 = menache(L2),
+    L4 = uniq(L3),
+    {build_dict(L4), length(L4)}.
+
+uniq(L) ->
+    sets:to_list(sets:from_list(L)).
 
 build_dict(Words) ->
     Dict = dict:new(),

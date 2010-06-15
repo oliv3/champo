@@ -63,6 +63,7 @@
 -define(PUTSTR(X), io:format("~s~n", [X])).
 
 -define(HINT, "noma"). %% "amon" reversed
+-define(HINT_LENGTH, length(?HINT)).
 
 worst() ->
     io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
@@ -333,11 +334,9 @@ create() ->
 
 is_viable(_Chrom) ->
     capello:three(_Chrom). %% will return true or false
-    %% true.
 
 random() ->
-    %% random(?ALPHABET_SIZE-length(?HINT), ?HINT, 26-length(?HINT), lists:seq($a, $z) -- ?HINT).
-    random(?ALPHABET_SIZE, [], 26, lists:seq($a, $z)).
+    random(?ALPHABET_SIZE-?HINT_LENGTH, ?HINT, 26-?HINT_LENGTH, lists:seq($a, $z) -- ?HINT).
 random(0, Acc, _N, _S) ->
     list_to_tuple(lists:reverse(Acc));
 random(Size, Acc, N, Chars) ->

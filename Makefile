@@ -1,6 +1,6 @@
 all: champo.beam capello.beam
 
-OPTIMS=+native +hipe
+#OPTIMS=+native +hipe
 
 %.beam: %.erl
 	erlc $(OPTIMS) $<
