@@ -27,10 +27,10 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 10000). %%30000). %% 200). %%200000).
+-define(POP_SIZE, 100). %%30000). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -73,6 +73,9 @@ new_chrom(C) ->
     spawn(fun () -> (?MODULE):chrom(C, undefined) end).
 
 start() ->
+    start(infinity).
+
+start(NLoops) ->
     %% Start crypto application
     io:format("[+] Starting crypto application: ~p~n", [crypto:start()]),
 
@@ -88,7 +91,7 @@ start() ->
     io:format("[i] main loop pid: ~p~n", [self()]),
 
     %% Start GA
-    loop(Pids, 1, 0).
+    loop(Pids, 1, 0, NLoops).
 
 
 stop() ->
@@ -127,7 +130,7 @@ ts() ->
     {_Date, {Hour, Min, Sec}} = calendar:local_time(),
     io_lib:format("~2B:~2.10.0B:~2.10.0B", [Hour, Min, Sec]).
 
-loop(Pids, Gen, RunTime) ->
+loop(Pids, Gen, RunTime, NLoops) ->
     Start = now(),
 
     %% Ask all chroms to evaluate
@@ -179,7 +182,20 @@ loop(Pids, Gen, RunTime) ->
 	    ok;
 	false ->
 	    %% Start again
-	    ?MODULE:loop(NewPids, Gen+1, Elapsed)
+	    NewNLoops = case NLoops of
+			    infinity ->
+				infinity;
+			    N ->
+				N -1
+			end,
+	    if
+		NewNLoops > 0 ->
+		    ?MODULE:loop(NewPids, Gen+1, Elapsed, NewNLoops);
+		true ->
+		    io:format("[i] Exiting at generation ~p~n", [Gen]),
+		    [Pid ! die || Pid <- NewPids],
+		    ok
+	    end
     end.
 
 
