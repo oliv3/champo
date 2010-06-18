@@ -279,8 +279,8 @@ extract([{_Pid, _A, S} = Element | Population], Score, CurScore) ->
     end.
 
 
-sum_scores(Pop) ->
-    lists:sum([Score || {_Pid, _Alphabet, Score} <- Pop]).
+sum_scores(Results) ->
+    lists:sum([Score || {_Pid, _Alphabet, Score} <- Results]).
 
 
 maybe_mutate(Pid) ->
