@@ -33,10 +33,10 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 10000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 4000). %%16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 20). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
