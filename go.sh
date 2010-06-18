@@ -1,3 +1,3 @@
 #!/bin/sh
 reset
-erl +K true +P 500000 -s champo $@
+erl +K true +A 4 +P 500000 -s champo $@

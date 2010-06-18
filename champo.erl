@@ -27,7 +27,7 @@
 
 -compile([export_all]). %% debug
 
--export([chrom/0, chrom/2]).
+%% -export([chrom/0, chrom/2]).
 
 %% GA parameters
 -define(POP_SIZE, 100). %%16). %% 200). %%200000).
@@ -524,6 +524,8 @@ h2(Pos) ->
 hl(Pos) ->
     io:format("~s~n", [split(?HL, Pos, $-)]).
 
+
+%% TODO move to utils.erl
 
 %%
 %% take 2 random -different- integers in [1..?ALPHABET_SIZE]
