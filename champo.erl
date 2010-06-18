@@ -141,11 +141,12 @@ loop(Pids, Gen, RunTime, NLoops) ->
     Start = now(),
 
     %% Ask all chroms to evaluate
+    %% XXX Ref est inutile ici, on attend N results back
     Ref = make_ref(),
-    %% Self = self(),
     [Pid ! {Ref, evaluate} || Pid <- Pids],
 
     %% Receive evaluations
+    %% XXX Ref inutile
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
 
     %% Inverse scores

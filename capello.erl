@@ -1,18 +1,14 @@
 -module(capello).
 -author('olivier@biniou.info').
 
+%% XXX VIRER l'appel a ets:tab2list et faire un traversal de la table
+
 %% ETS/ make_tuple(ets:new(), 8).
-%% [ets:new(list_to_atom(integer_to_list(I)), [set]) || I <- lists:seq(2, 8)].
-%% faire un tuple avec la liste plus undefined en premier
+%% list_to_tuple([undefined | [ets:new(list_to_atom(integer_to_list(I)), [set, named_table]) || I <- lists:seq(2, 8)]]).
 %% et en named table. du coup prefixage avec l'atom
 
 %% TODO version intermediaire avec le dict, coder la longueur
 %% avant ie {'7', [6, 7, 3, 8, 5, 9, 5]}
-
-%% TODO inserer les mots dans N tables ETS
-%% eg une table ETS '3' pour lookup des mots de 3 lettres
-%% ~1s / run pour 100 chroms en liste de strings
-%% + faire les lookups ETS en asynchrone
 
 %%
 %% Maitre Capello
@@ -173,46 +169,38 @@ diff([H1|T1], [H2|T2], Score) ->
 %% ou < si != -1
 -define(BEAUCOUP, (($z-$a+1) * ?ALPHABET_SIZE)).
 
-find_in_dict(String, Dict) ->
-    find_in_dict(String, Dict, undefined, ?BEAUCOUP).
+find_best_match(String, Words) ->
+    find_best_match(String, Words, undefined, ?BEAUCOUP).
 
-find_in_dict(_String, [], undefined, _BestSoFar) ->
+find_best_match(_String, [], undefined, _BestSoFar) ->
     ?BEAUCOUP;
-find_in_dict(_String, [], BestWord, BestSoFar) ->
+find_best_match(_String, [], BestWord, BestSoFar) ->
     {BestWord, BestSoFar};
-find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
+find_best_match(String, [Word|Words], BestWord, BestSoFar) ->
     Score = diff(String, Word),
     case Score of
 	0 ->
 	    {Word, 0};
 	S when S < BestSoFar ->
-	    find_in_dict(String, Words, Word, S);
+	    find_best_match(String, Words, Word, S);
 	_Other -> %% score inferieur ou undefined
-	    find_in_dict(String, Words, BestWord, BestSoFar)
+	    find_best_match(String, Words, BestWord, BestSoFar)
     end.
 
-%% match a list of words vs a dict in an ETS table
-%% TODO rename Dict -> ETS
-match(Words, Dict) ->
-    [find_in_dict0(Word, Dict) || Word <- Words].
-
+%% match a list of words vs a dictionary stored in an ETS table
 %% TODO mettre l'enigme au format {Len, [Letters]}
 %% pour eviter l'appel a length a chaque fois
 %% (et dans la version ETS, taper dans la bonne table)
-%% XXX this is totally unefficient
-find_in_dict0(DaWord, ETS) ->
-%%    Len = length(DaWord),
-    %% Words = dict:fetch(Len, Dict),
-    Words0 = ets:tab2list(ETS),
-%%    Words1 = [Word || {Word} <- Words0, length(Word) == Len],
-    %%find_in_dict(DaWord, Words1).
-    find_in_dict(DaWord, Words0).
+match(Words, List) ->
+    [find_best_match(Word, List) || Word <- Words].
+
 
 %% Translate the riddle then returns the score
-check_sentence(Sentence, Dict) ->
+check_sentence(Sentence, ETS) ->
     %% NOTE S+1 pour multiplier des ints > 0,
     %% le score ideal est donc: 1
-    Scores = [S+1 || {_Word, S} <- match(Sentence, Dict)],
+    List = ets:tab2list(ETS),
+    Scores = [S+1 || {_Word, S} <- match(Sentence, List)],
     multiply(Scores).
 
 multiply(Scores) ->
