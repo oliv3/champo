@@ -5,6 +5,11 @@
 
 %% XXX: bug dans le calcul des scores actuel @{#
 
+%% TODO: une branche "mdqtp" -> dans ce cas on ne calcule plus la diff
+%% entre les mots mais le nombre de mots corrects (eg: "amon pwxls est" => 2/3).
+%% du coup le max score == 1, on vire diff() et on fait un lookup dans
+%% la table ETS
+
 %% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
 
 %% TODO: c'est le chrom qui fait appel a random() lors de son bootstrap,
