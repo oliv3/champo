@@ -3,8 +3,6 @@
 
 -include("champo.hrl").
 
-%% XXX: bug dans le calcul des scores actuel @{#
-
 %% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
 
 %% TODO (bad idea ?): une branche "mdqtp" -> dans ce cas on ne calcule plus la diff
