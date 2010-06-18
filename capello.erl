@@ -67,9 +67,10 @@ stop() ->
 
 
 three(Chrom) ->
-    ?SERVER ! {self(), {three, Chrom}},
+    Ref = make_ref(),
+    ?SERVER ! {self(), {Ref, three, Chrom}},
     receive
-	Result ->
+	{Ref, Result} ->
 	    Result
     end.
 
@@ -88,11 +89,11 @@ loop(#state{words=Words, three=Three} = State) ->
 	%% Any ->
 	%%     io:format("Got message: ~p~n", [Any]);
 
-	{Pid, {three, Chrom}} ->
+	{Pid, {Ref, three, Chrom}} ->
 	    TWord = translate(?WORD3, Chrom),
 	    %% HERE test sur lookup =/= []
 	    In = ets:lookup(Three, TWord) =/= [],
-	    Pid ! In;
+	    Pid ! {Ref, In};
 
 	{Pid, {check, Chrom}} ->
 	    Sentence = sentence(Chrom),

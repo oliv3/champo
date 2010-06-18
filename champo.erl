@@ -30,10 +30,10 @@
 
 -compile([export_all]). %% debug
 
--export([chrom/2]).
+-export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 4000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 100). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 20). %%1000). %% 1 chance sur 1000
@@ -74,7 +74,8 @@
 worst() ->
     io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
 
-%% tidier
+new_chrom() ->
+    spawn(fun () -> (?MODULE):chrom() end).
 new_chrom(C) ->
     spawn(fun () -> (?MODULE):chrom(C, undefined) end).
 
@@ -89,8 +90,8 @@ start(NLoops) ->
     capello:start(),
 
     %% Create initial population
-    Pop = population(),
-    Pids = [new_chrom(C) || C <- Pop],
+    %% Pop = population(),
+    Pids = [new_chrom() || _X <- lists:seq(1, ?POP_SIZE)],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
 
     register(?MODULE, self()),
@@ -297,6 +298,10 @@ mutate(Pid) ->
     Pid ! {mutate, Mutation}.
 
 
+chrom() ->
+    C = create(),
+    chrom(C, undefined).
+
 chrom(C, Score) ->
     receive
 	{Ref, evaluate} when Score == undefined ->
@@ -356,8 +361,8 @@ create() ->
 	    create()
     end.
 
-is_viable(_Chrom) ->
-    capello:three(_Chrom). %% will return true or false
+is_viable(Chrom) ->
+    capello:three(Chrom). %% will return true or false
 
 random() ->
     random(?ALPHABET_SIZE-?HINT_LENGTH, ?HINT, 26-?HINT_LENGTH, lists:seq($a, $z) -- ?HINT).
