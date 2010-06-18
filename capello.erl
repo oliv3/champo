@@ -2,7 +2,7 @@
 -author('olivier@biniou.info').
 
 %% XXX virer l'appel a ets:tab2list et faire un traversal de la table
-%% (quoique l'appel a tab2list a l'air de rien bouffer)
+%% (quoique l'appel a tab2list a l'air de rien bouffer, mais bon. sexy or not)
 
 %% ETS/ make_tuple(ets:new(), 8).
 %% list_to_tuple([undefined | [ets:new(list_to_atom(integer_to_list(I)), [set, named_table]) || I <- lists:seq(2, 8)]]).
@@ -149,10 +149,10 @@ translate(Word, Chrom) ->
 sentence(Chrom) ->
     [translate(Word, Chrom) || Word <- ?RIDDLE].
 
+-define(BEAUCOUP, (($z-$a+1) * ?ALPHABET_SIZE)).
+
 %% diff entre 2 strings
 %% ~= algo de Hamming
-%% NOTE: version ETS, normalement on n'extrait que les words de bonne taille
-%% thus le check ci-dessous est inutile
 diff(Str1, Str2) when length(Str1) =:= length(Str2) ->
     diff(Str1, Str2, 0);
 diff(_Truc1, _Truc2) ->
@@ -166,10 +166,6 @@ diff([H1|T1], [H2|T2], Score) ->
     diff(T1, T2, Score + abs(H1-H2)).
 
 %% Truc qui fait des calculs de distance d'un mot vs un dict
-%% FIXME could be better, partir avec BEAUCOUP = -1 et tester dessus
-%% ou < si != -1
--define(BEAUCOUP, (($z-$a+1) * ?ALPHABET_SIZE)).
-
 find_best_match(String, Words) ->
     find_best_match(String, Words, undefined, ?BEAUCOUP).
 
@@ -179,12 +175,15 @@ find_best_match(_String, [], BestWord, BestSoFar) ->
     {BestWord, BestSoFar};
 find_best_match(String, [Word|Words], BestWord, BestSoFar) ->
     Score = diff(String, Word),
+    %% io:format("Score: ~p~n", [Score]),
     case Score of
+	%% undefined ->
+	%%     find_best_match(String, Words, BestWord, BestSoFar);
 	0 ->
 	    {Word, 0};
 	S when S < BestSoFar ->
 	    find_best_match(String, Words, Word, S);
-	_Other -> %% score inferieur ou undefined
+	_Other -> %% score superieur
 	    find_best_match(String, Words, BestWord, BestSoFar)
     end.
 
@@ -200,7 +199,8 @@ match(Words, List) ->
 check_sentence(Sentence, ETS) ->
     %% NOTE S+1 pour multiplier des ints > 0,
     %% le score ideal est donc: 1
-    List = ets:tab2list(ETS),
+    List = [W || {W} <- ets:tab2list(ETS)],
+    %% io:format("Words: ~p~n", [List]),
     Scores = [S+1 || {_Word, S} <- match(Sentence, List)],
     multiply(Scores).
 
