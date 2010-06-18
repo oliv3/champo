@@ -267,9 +267,6 @@ f({_Pid, Alphabet, _Score}) ->
 
 extract(Population, Score) ->
     extract(Population, Score, 0).
-extract([], Score, CurScore) ->
-    io:format("[!] WTF no more parents Score= ~p CurScore= ~p~n", [Score, CurScore]),
-    exit(duergl);
 extract([{_Pid, _A, S} = Element | Population], Score, CurScore) ->
     NewScore = CurScore + S,
     if
