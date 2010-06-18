@@ -1,8 +1,13 @@
 -module(capello).
 -author('olivier@biniou.info').
 
+%% ETS/ make_tuple(ets:new(), 8).
+%% [ets:new(list_to_atom(integer_to_list(I)), [set]) || I <- lists:seq(2, 8)].
+%% faire un tuple avec la liste plus undefined en premier
+%% et en named table. du coup prefixage avec l'atom
+
 %% TODO version intermediaire avec le dict, coder la longueur
-%% avant ie {7, [6, 7, 3, 8, 5, 9, 5]}
+%% avant ie {'7', [6, 7, 3, 8, 5, 9, 5]}
 
 %% TODO inserer les mots dans N tables ETS
 %% eg une table ETS '3' pour lookup des mots de 3 lettres
@@ -25,7 +30,7 @@
 
 
 -define(SERVER, ?MODULE).
--record(state, {words, threes}).
+-record(state, {words, three}).
 
 %% The riddle
 %% http://www.youtube.com/watch?v=5ehHOwmQRxU
@@ -47,10 +52,10 @@
 
 start() ->
     io:format("[+] Loading dictionary: ", []),
-    {Words, N} = dict_load(),
-    {ok, Threes} = dict:find(3, Words),
-    io:format("~p words (~p of 3 letters)~n", [N, length(Threes)]),
-    Pid = spawn(?SERVER, loop, [#state{words=Words, threes=Threes}]),
+    {Words, Three} = dict_load(),
+    io:format("~p words (~p of 3 letters)~n", [ets:info(Words, size), ets:info(Three, size)]),
+    %% io:format("~p words~n", [ets:info(Words, size)]),
+    Pid = spawn(?SERVER, loop, [#state{words=Words, three=Three}]),
     register(?SERVER, Pid),
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
 
@@ -81,15 +86,20 @@ check(Chrom) ->
 
 %% ------------------------------------------------------------------
 
-loop(#state{words=Words, threes=Threes} = State) ->
+loop(#state{words=Words, three=Three} = State) ->
     receive
+	%% Any ->
+	%%     io:format("Got message: ~p~n", [Any]);
+
 	{Pid, {three, Chrom}} ->
-	    Word = translate(?WORD3, Chrom),
-	    In = lists:member(Word, Threes),
+	    TWord = translate(?WORD3, Chrom),
+	    %% HERE test sur lookup =/= []
+	    In = ets:lookup(Three, TWord) =/= [],
 	    Pid ! In;
 
 	{Pid, {check, Chrom}} ->
 	    Sentence = sentence(Chrom),
+	    %% io:format("Checking sentence: ~p~n", [Sentence]),
 	    Score = check_sentence(Sentence, Words),
 	    Pid ! Score;
 
@@ -111,22 +121,23 @@ dict_load(File) ->
     L = binary_to_list(B),
     L2 = string:tokens(L, [10, 13, $-, $', $ ]),
     L3 = menache(L2),
-    L4 = uniq(L3),
-    {build_dict(L4), length(L4)}.
+    build_ets(L3).
 
-uniq(L) ->
-    sets:to_list(sets:from_list(L)).
+build_ets(Words) ->
+    Tid = ets:new(words, [set]),
+    Three = ets:new(three, [set]),
+    insert(Words, Tid, Three),
+    {Tid, Three}.
 
-build_dict(Words) ->
-    Dict = dict:new(),
-    insert(Words, Dict).
-
-insert([], Dict) ->
-    Dict;
-insert([Word|Words], Dict) ->
-    Len = length(Word),
-    NewDict = dict:append(Len, Word, Dict),
-    insert(Words, NewDict).
+insert([], _Tid, _Three) ->
+    ok;
+insert([Word|Words], Tid, Three) when length(Word) == 3->
+    true = ets:insert(Tid, {Word}),
+    true = ets:insert(Three, {Word}),
+    insert(Words, Tid, Three);
+insert([Word|Words], Tid, Three) ->
+    true = ets:insert(Tid, {Word}),
+    insert(Words, Tid, Three).
 
 %% menache dans le dictionnaire, on ne garde
 %% que les mots de taille >= 2 et <= ?MAX_WORD_LENGTH
@@ -143,6 +154,8 @@ sentence(Chrom) ->
 
 %% diff entre 2 strings
 %% ~= algo de Hamming
+%% NOTE: version ETS, normalement on n'extrait que les words de bonne taille
+%% thus le check ci-dessous est inutile
 diff(Str1, Str2) when length(Str1) =:= length(Str2) ->
     diff(Str1, Str2, 0);
 diff(_Truc1, _Truc2) ->
@@ -174,28 +187,26 @@ find_in_dict(String, [Word|Words], BestWord, BestSoFar) ->
 	    {Word, 0};
 	S when S < BestSoFar ->
 	    find_in_dict(String, Words, Word, S);
-	_Other ->
+	_Other -> %% score inferieur ou undefined
 	    find_in_dict(String, Words, BestWord, BestSoFar)
     end.
 
-%% match a list of words vs a dict
-%%
-%% > Dict.
-%% ["abc","hello","world"]
-%% > Words = ["helli", "world", "absz"].
-%% ["helli","world","absz"]
-%% > champo:match(Words, Dict).         
-%% [{"hello",6},{"world",0},undefined]
+%% match a list of words vs a dict in an ETS table
+%% TODO rename Dict -> ETS
 match(Words, Dict) ->
     [find_in_dict0(Word, Dict) || Word <- Words].
 
 %% TODO mettre l'enigme au format {Len, [Letters]}
 %% pour eviter l'appel a length a chaque fois
 %% (et dans la version ETS, taper dans la bonne table)
-find_in_dict0(Word, Dict) ->
-    Len = length(Word),
-    Words = dict:fetch(Len, Dict),
-    find_in_dict(Word, Words).
+%% XXX this is totally unefficient
+find_in_dict0(DaWord, ETS) ->
+%%    Len = length(DaWord),
+    %% Words = dict:fetch(Len, Dict),
+    Words0 = ets:tab2list(ETS),
+%%    Words1 = [Word || {Word} <- Words0, length(Word) == Len],
+    %%find_in_dict(DaWord, Words1).
+    find_in_dict(DaWord, Words0).
 
 %% Translate the riddle then returns the score
 check_sentence(Sentence, Dict) ->

@@ -3,6 +3,13 @@
 
 -include("champo.hrl").
 
+%% XXX: bug dans le calcul des scores actuel @{#
+
+%% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
+
+%% TODO: c'est le chrom qui fait appel a random() lors de son bootstrap,
+%% ce n'est pas la main loop qui fait les appels
+
 %% Nombre de solutions à ce pb: 26^14
 %%
 %% > math:pow(26,14).
@@ -27,10 +34,10 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 100). %%30000). %% 200). %%200000).
+-define(POP_SIZE, 16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 2). %%100). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -135,8 +142,8 @@ loop(Pids, Gen, RunTime, NLoops) ->
 
     %% Ask all chroms to evaluate
     Ref = make_ref(),
-    Self = self(),
-    [Pid ! {Self, Ref, evaluate} || Pid <- Pids],
+    %% Self = self(),
+    [Pid ! {Ref, evaluate} || Pid <- Pids],
 
     %% Receive evaluations
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
@@ -155,6 +162,15 @@ loop(Pids, Gen, RunTime, NLoops) ->
     [display(T) || T <- Top],
     io:format("~n", []),
 
+    case do_stop() of
+	true ->
+	    ok;
+	false ->
+	    %% Start again
+	    restart(Gen, RunTime, NLoops, Results, Start)
+    end.
+
+restart(Gen, RunTime, NLoops, Results, Start) ->
     %% Divide poulation in two
     %% TODO ? garder 25% et regénérer 75% ?
     {Winners, Losers} = lists:split(?H_POP_SIZE, Results),
@@ -177,25 +193,19 @@ loop(Pids, Gen, RunTime, NLoops) ->
     %% Sleep for a while to cool the CPU
     timer:sleep(?TOM),
 
-    case do_stop() of
+    NewNLoops = case NLoops of
+		    infinity ->
+			infinity;
+		    N ->
+			N -1
+		end,
+    if
+	NewNLoops > 0 -> %% heureusement (infinity > 0) == true :)
+	    ?MODULE:loop(NewPids, Gen+1, Elapsed, NewNLoops);
 	true ->
-	    ok;
-	false ->
-	    %% Start again
-	    NewNLoops = case NLoops of
-			    infinity ->
-				infinity;
-			    N ->
-				N -1
-			end,
-	    if
-		NewNLoops > 0 ->
-		    ?MODULE:loop(NewPids, Gen+1, Elapsed, NewNLoops);
-		true ->
-		    io:format("[i] Exiting at generation ~p~n", [Gen]),
-		    [Pid ! die || Pid <- NewPids],
-		    ok
-	    end
+	    io:format("[i] Exiting at generation ~p~n", [Gen]),
+	    [Pid ! die || Pid <- NewPids],
+	    ok
     end.
 
 
@@ -291,13 +301,13 @@ mutate(Pid) ->
 
 chrom(C, Score) ->
     receive
-	{Pid, Ref, evaluate} when Score == undefined ->
+	{Ref, evaluate} when Score == undefined ->
 	    S = capello:check(C),
-	    Pid ! {Ref, {self(), C, S}},
+	    ?MODULE ! {Ref, {self(), C, S}},
 	    chrom(C, S);
 
-	{Pid, Ref, evaluate} ->
-	    Pid ! {Ref, {self(), C, Score}},
+	{Ref, evaluate} ->
+	    ?MODULE ! {Ref, {self(), C, Score}},
 	    chrom(C, Score);
 
 	{mutate, 0} ->
