@@ -2,3 +2,5 @@ erl_crash.dump
 *~
 *.beam
 *.log
+*.trace*
+*.analysis*
