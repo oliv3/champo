@@ -3,9 +3,6 @@
 
 -include("champo.hrl").
 
-%% TODO: c'est le chrom qui fait appel a random() lors de son bootstrap,
-%% ce n'est pas la main loop qui fait les appels
-
 %% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
 
 %% Nombre de solutions à ce pb: 26^14
@@ -90,8 +87,7 @@ start(NLoops) ->
     capello:start(),
 
     %% Create initial population
-    %% Pop = population(),
-    Pids = [new_chrom() || _X <- lists:seq(1, ?POP_SIZE)],
+    Pids = [new_chrom() || _Counter <- lists:seq(1, ?POP_SIZE)],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
 
     register(?MODULE, self()),
@@ -374,11 +370,6 @@ random(Size, Acc, N, Chars) ->
     NewChars = Chars -- [Elem],
     random(Size-1, [Elem|Acc], N-1, NewChars).
 
-population() ->
-    %% TODO generer une population unique ie la avec ce code
-    %% on peut avoir 2x le meme chromosome -oui meme si c'est statistiquement
-    %% tendu- ce serait bien de partir sur une base de chroms uniques
-    [create() || _ <- lists:seq(1, ?POP_SIZE)].
 
 t2b(X) ->
     list_to_binary(tuple_to_list(X)).
