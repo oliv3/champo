@@ -3,6 +3,8 @@
 
 -include("champo.hrl").
 
+%% -define(USE_HINT, true). %% Use the "amon" word hint
+
 %% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
 
 %% Nombre de solutions à ce pb: 26^14
@@ -30,7 +32,7 @@
 %% -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 100). %%16). %% 200). %%200000).
+-define(POP_SIZE, 600). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 20). %%1000). %% 1 chance sur 1000
@@ -350,18 +352,21 @@ to_char(X) ->
 
 create() ->
     Chrom = random(),
-    case is_viable(Chrom) of
+    case capello:three(Chrom) of
 	true ->
 	    Chrom;
 	false ->
 	    create()
     end.
 
-is_viable(Chrom) ->
-    capello:three(Chrom). %% will return true or false
-
+-ifdef(USE_HINT).
 random() ->
     random(?ALPHABET_SIZE-?HINT_LENGTH, ?HINT, 26-?HINT_LENGTH, lists:seq($a, $z) -- ?HINT).
+-else.
+random() ->
+    random(?ALPHABET_SIZE, [], 26, lists:seq($a, $z)).
+-endif.
+
 random(0, Acc, _N, _S) ->
     list_to_tuple(lists:reverse(Acc));
 random(Size, Acc, N, Chars) ->
