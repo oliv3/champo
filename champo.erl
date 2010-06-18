@@ -3,18 +3,10 @@
 
 -include("champo.hrl").
 
-%% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
-
-%% TODO (bad idea ?): une branche "mdqtp" -> dans ce cas on ne calcule plus la diff
-%% entre les mots mais le nombre de mots corrects (eg: "amon pwxls est" => 2/3).
-%% du coup le max score == 1, on vire diff() et on fait un lookup dans
-%% la table ETS
-
-%% TODO (?): fitness vs la phrase à trouver aussi: on multiplie le score
-%% par nombre de bons mots / nombre mots total
-
 %% TODO: c'est le chrom qui fait appel a random() lors de son bootstrap,
 %% ce n'est pas la main loop qui fait les appels
+
+%% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
 
 %% Nombre de solutions à ce pb: 26^14
 %%
@@ -41,10 +33,10 @@
 -export([chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 16). %% 200). %%200000).
+-define(POP_SIZE, 10000). %%16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 2). %%100). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -237,32 +229,33 @@ neg_score({Pid, Alphabet, Score}) ->
 
 
 %% version avec roulette
-new_population(0, _Parents, _MaxScore, Acc) ->
+new_population(0, _Population, _MaxScore, Acc) ->
     Acc;
-new_population(N, Parents, MaxScore, Acc) ->
-    {Parent1Pid, Chrom1, _S} = roulette(Parents, MaxScore, undefined),
-    {_Parent2Pid, Chrom2, _S2} = roulette(Parents, MaxScore, Parent1Pid),
+new_population(N, Population, MaxScore, Acc) ->
+    {Parent1Pid, Chrom1, _S} = roulette(Population, MaxScore, undefined),
+    {_Parent2Pid, Chrom2, _S2} = roulette(Population, MaxScore, Parent1Pid),
 
     {_, _, MS} = now(),
+    Parents = {Chrom1, Chrom2},
     {Child1, Child2} = case MS rem 2 of
 			   0 ->
-			       xover1({Chrom1, Chrom2});
+			       xover1(Parents);
 			   1 ->
-			       xover2({Chrom1, Chrom2})
+			       xover2(Parents)
 		       end,
     Pid1 = new_chrom(Child1),
     Pid2 = new_chrom(Child2),
     maybe_mutate(Pid1),
     maybe_mutate(Pid2),
-    new_population(N-2, Parents, MaxScore, [Pid1, Pid2 | Acc]).
+    new_population(N-2, Population, MaxScore, [Pid1, Pid2 | Acc]).
 
 
-roulette(Parents, MaxScore, NotThisPid) ->
+roulette(Population, MaxScore, NotThisPid) ->
     Score = crypto:rand_uniform(0, MaxScore),
-    {Pid, _A, _S} = This = extract(Parents, Score),
+    {Pid, _A, _S} = This = extract(Population, Score),
     if
 	Pid == NotThisPid ->
-	    roulette(Parents, MaxScore, NotThisPid);
+	    roulette(Population, MaxScore, NotThisPid);
 	true ->
 	    This
     end.
@@ -272,12 +265,12 @@ f({_Pid, Alphabet, _Score}) ->
     pp(Alphabet).
 
 
-extract(Parents, Score) ->
-    extract(Parents, Score, 0).
+extract(Population, Score) ->
+    extract(Population, Score, 0).
 extract([], Score, CurScore) ->
     io:format("[!] WTF no more parents Score= ~p CurScore= ~p~n", [Score, CurScore]),
     exit(duergl);
-extract([{_Pid, _A, S} = Element | Parents], Score, CurScore) ->
+extract([{_Pid, _A, S} = Element | Population], Score, CurScore) ->
     NewScore = CurScore + S,
     if
 	NewScore >= Score ->
@@ -285,7 +278,7 @@ extract([{_Pid, _A, S} = Element | Parents], Score, CurScore) ->
 	    Element;
 	true ->
 	    %% io:format("[d] Skipp element ~p, score ~p -> ~p  < ~p~n",   [f(Element), S, NewScore, Score]),
-	    extract(Parents, Score, NewScore)
+	    extract(Population, Score, NewScore)
     end.
 
 
