@@ -3,9 +3,15 @@
 
 -include("champo.hrl").
 
-%% -define(USE_HINT, true). %% Use the "amon" word hint
+-define(USE_HINT, true). %% Use the "amon" word hint
 
 %% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
+
+%% TODO: Evaluations, travailler juste avec {Pid, Score}, l'alphabet osef
+
+%% XXX FIXME
+%% [C] Alphabet: "amoneprtgskcli" => "amon me protege sekmet me garce en son temple oriental" <- Solution (103485299115558197372) (4)
+%% deja pourquoi ca fait 4 au lieu de 2 ? (garce/garde (delta=1, +1 => 2))
 
 %% Nombre de solutions à ce pb: 26^14
 %%
@@ -13,6 +19,7 @@
 %% 6.450997470329715e19
 %%
 %% ce qui fait... beaucoup :)
+%%
 %% => 141167095653376 si on prend l'indice "amon" (26^10).
 
 %%
@@ -32,7 +39,7 @@
 %% -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 600). %%16). %% 200). %%200000).
+-define(POP_SIZE, 4000). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 20). %%1000). %% 1 chance sur 1000
@@ -56,14 +63,15 @@
 	  ?WORST(3) *
 	  ?WORST(6) *
 	  ?WORST(8)
+          - 3 %% Un jour on m'expliquera pourquoi
+		%% ca renvoie '4' sur un exact match au lieu de 1
 	 )).
-%% -define(EXACT_GUESS, 1). %% une évidence, non ?
 
 -define(H1, "         1").
 -define(H2, "12345678901234").
 -define(HL, "--------------").
 
--define(TOP, 15). %% Top N display
+-define(TOP, 20). %% Top N display
 
 -define(PUTSTR(X), io:format("~s~n", [X])).
 
@@ -115,8 +123,7 @@ receive_result(Ref) ->
     end.
 
 
-%% match(1) ->
-match(103485299115558197372) -> %% Don't ask me why it is not 1 as expected :)
+match(1) ->
     "<- Solution ";
 match(_) ->
     "".
