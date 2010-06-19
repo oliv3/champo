@@ -39,10 +39,10 @@
 %% -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 4000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 1000). %%16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 20). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 5). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -71,7 +71,7 @@
 -define(H2, "12345678901234").
 -define(HL, "--------------").
 
--define(TOP, 20). %% Top N display
+-define(TOP, 10). %% Top N display
 
 -define(PUTSTR(X), io:format("~s~n", [X])).
 
