@@ -5,6 +5,10 @@
 
 -define(USE_HINT, true). %% Use the "amon" word hint
 
+%% TODO: simplifier la fonction de fitness (capello): plus de diff entre
+%% les strings, retourner 1 si le mot est dans le dico, 0 sinon...
+%% du coup ca va simplifier pas mal la bete...
+
 %% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
 
 %% TODO: Evaluations, travailler juste avec {Pid, Score}, l'alphabet osef
@@ -39,10 +43,10 @@
 %% -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 1000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 10000). %%16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 5). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 20). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -52,6 +56,7 @@
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 -define(WORST(X), (X*25+1)).
+
 -define(WORST_GUESS_EVER, (
 	  ?WORST(4) *
 	  ?WORST(2) *
@@ -63,8 +68,8 @@
 	  ?WORST(3) *
 	  ?WORST(6) *
 	  ?WORST(8)
-          - 3 %% Un jour on m'expliquera pourquoi
-		%% ca renvoie '4' sur un exact match au lieu de 1
+%%          - 3 %% Un jour on m'expliquera pourquoi
+%%	  	%% ca renvoie '4' sur un exact match au lieu de 1
 	 )).
 
 -define(H1, "         1").
@@ -123,7 +128,7 @@ receive_result(Ref) ->
     end.
 
 
-match(1) ->
+match(?WORST_GUESS_EVER-1) ->
     "<- Solution ";
 match(_) ->
     "".

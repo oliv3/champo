@@ -202,7 +202,9 @@ check_sentence(Sentence, ETS) ->
     %% le score ideal est donc: 1
     List = [W || {W} <- ets:tab2list(ETS)],
     %% io:format("Words: ~p~n", [List]),
+    %% XXX osef completement du Word retourne par match/2
     Scores = [S+1 || {_Word, S} <- match(Sentence, List)],
+    %% io:format("Scores: ~p -> ~p~n", [Scores, multiply(Scores)]),
     multiply(Scores).
 
 multiply(Scores) ->
