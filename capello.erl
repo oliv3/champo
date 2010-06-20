@@ -198,14 +198,12 @@ match(Words, List) ->
 
 %% Translate the riddle then returns the score
 check_sentence(Sentence, ETS) ->
-    %% NOTE S+1 pour multiplier des ints > 0,
-    %% le score ideal est donc: 1
     List = [W || {W} <- ets:tab2list(ETS)],
     %% io:format("Words: ~p~n", [List]),
     %% XXX osef completement du Word retourne par match/2
-    Scores = [S+1 || {_Word, S} <- match(Sentence, List)],
+    Scores = [S || {_Word, S} <- match(Sentence, List)],
     %% io:format("Scores: ~p -> ~p~n", [Scores, multiply(Scores)]),
-    multiply(Scores).
+    lists:sum(Scores).
 
-multiply(Scores) ->
-    lists:foldr(fun(Elem, Acc) -> Elem * Acc end, 1, Scores).
+%% multiply(Scores) ->
+%%     lists:foldr(fun(Elem, Acc) -> Elem * Acc end, 1, Scores).
