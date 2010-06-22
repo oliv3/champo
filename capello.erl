@@ -61,6 +61,17 @@
 %% eprof: Starting profiling .....
 %% profiling
 %%
+
+%% ==========================================================================
+%% FIRST RESULTS
+%% 5> eprof:total_analyse().
+%% FUNCTION                                       CALLS      TIME
+%% capello:find_best_match/4                      24843333   50 %
+%% capello:diff/3                                 23161712   23 %
+%% capello:diff/2                                 24841792   22 %
+%% capello:'-check_sentence/2-lc$^0/1-0-'/1       2609659    5 %
+%% ==========================================================================
+%%
 pid() ->
     whereis(?SERVER).
 
