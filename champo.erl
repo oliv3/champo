@@ -46,7 +46,7 @@
 -define(POP_SIZE, 1000). %%16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 20). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 5). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -72,6 +72,8 @@
 %%	  	%% ca renvoie '4' sur un exact match au lieu de 1
 	 )).
 
+-define(SERVER, ?MODULE).
+
 -define(H1, "         1").
 -define(H2, "12345678901234").
 -define(HL, "--------------").
@@ -91,6 +93,11 @@ new_chrom() ->
 new_chrom(C) ->
     spawn(fun () -> (?MODULE):chrom(C, undefined) end).
 
+
+%% for eprof
+pid() ->
+    whereis(?SERVER).
+
 start() ->
     start(infinity).
 
@@ -105,7 +112,7 @@ start(NLoops) ->
     Pids = [new_chrom() || _Counter <- lists:seq(1, ?POP_SIZE)],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
 
-    register(?MODULE, self()),
+    register(?SERVER, self()),
     io:format("[i] main loop pid: ~p~n", [self()]),
 
     %% Start GA
@@ -114,7 +121,7 @@ start(NLoops) ->
 
 stop() ->
     Ref = make_ref(),
-    ?MODULE ! {self(), Ref, stop},
+    ?SERVER ! {self(), Ref, stop},
     receive
 	{Ref, stopped} ->
 	    capello:stop()
@@ -316,11 +323,11 @@ chrom(C, Score) ->
     receive
 	{Ref, evaluate} when Score == undefined ->
 	    S = capello:check(C),
-	    ?MODULE ! {Ref, {self(), C, S}},
+	    ?SERVER ! {Ref, {self(), C, S}},
 	    chrom(C, S);
 
 	{Ref, evaluate} ->
-	    ?MODULE ! {Ref, {self(), C, Score}},
+	    ?SERVER ! {Ref, {self(), C, Score}},
 	    chrom(C, Score);
 
 	{mutate, 0} ->

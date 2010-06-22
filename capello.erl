@@ -25,6 +25,9 @@
 -export([check/1, sentence/1]).
 -export([three/1]).
 
+%% CHEAT
+-export([solve/0]).
+
 
 -define(SERVER, ?MODULE).
 -record(state, {words, three}).
@@ -45,6 +48,21 @@
 		]).
 %% Therefore we set
 -define(MAX_WORD_LENGTH, 8).
+
+
+%%
+%% for eprof:
+%% taken from::
+%% http://lserinol.blogspot.com/2009/01/profiling-performance-of-erlang.html
+%%
+%% 1> capello:pid().
+%% <0.41.0>
+%% 2> eprof:start_profiling([capello:pid()]).
+%% eprof: Starting profiling .....
+%% profiling
+%%
+pid() ->
+    whereis(?SERVER).
 
 
 start() ->
@@ -207,3 +225,14 @@ check_sentence(Sentence, ETS) ->
 
 %% multiply(Scores) ->
 %%     lists:foldr(fun(Elem, Acc) -> Elem * Acc end, 1, Scores).
+
+
+%%
+%% CHEATING code here
+%%
+-define(SOLUTION, list_to_tuple("amoneprtgskdli")).
+
+solve() ->
+    Riddle = ?RIDDLE,
+    Solution = ?SOLUTION,
+    wip.
