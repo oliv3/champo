@@ -64,6 +64,9 @@
 
 %% ==========================================================================
 %% FIRST RESULTS
+%%
+%% 4> eprof:stop_profiling()
+%%
 %% 5> eprof:total_analyse().
 %% FUNCTION                                       CALLS      TIME
 %% capello:find_best_match/4                      24843333   50 %
@@ -207,8 +210,6 @@ find_best_match(String, [Word|Words], BestWord, BestSoFar) ->
     Score = diff(String, Word),
     %% io:format("Score: ~p~n", [Score]),
     case Score of
-	%% undefined ->
-	%%     find_best_match(String, Words, BestWord, BestSoFar);
 	0 ->
 	    {Word, 0};
 	S when S < BestSoFar ->
