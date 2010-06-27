@@ -1,9 +1,6 @@
 -module(capello).
 -author('olivier@biniou.info').
 
-%% XXX virer l'appel a ets:tab2list et faire un traversal de la table
-%% (quoique l'appel a tab2list a l'air de rien bouffer, mais bon. sexy or not)
-
 %% ETS/ make_tuple(ets:new(), 8).
 %% list_to_tuple([undefined | [ets:new(list_to_atom(integer_to_list(I)), [set, named_table]) || I <- lists:seq(2, 8)]]).
 %% et en named table. du coup prefixage avec l'atom
