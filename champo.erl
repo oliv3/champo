@@ -43,7 +43,7 @@
 %% -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 1000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 20). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 5). %%1000). %% 1 chance sur 1000
@@ -147,9 +147,9 @@ ts() ->
     {_Date, {Hour, Min, Sec}} = calendar:local_time(),
     io_lib:format("~2B:~2.10.0B:~2.10.0B", [Hour, Min, Sec]).
 
-receive_result() ->
+receive_result(Ref) ->
     receive
-	R ->
+	{Ref, R} ->
 	    R
     end.
 
@@ -157,10 +157,11 @@ loop(Pids, Gen, RunTime, NLoops) ->
     Start = now(),
 
     %% Ask all chroms to evaluate
-    [Pid ! evaluate || Pid <- Pids],
+    Ref = make_ref(),
+    [Pid ! {Ref, evaluate} || Pid <- Pids],
 
     %% Receive evaluations
-    Evaluations = [receive_result() || _Pid <- Pids],
+    Evaluations = [receive_result(Ref) || _Pid <- Pids],
 
     %% Inverse scores
     %% io:format("Evals: ~p~n", [Evaluations]),
@@ -319,13 +320,13 @@ chrom() ->
 
 chrom(C, Score) ->
     receive
-	evaluate when Score == undefined ->
+	{Ref, evaluate} when Score == undefined ->
 	    S = capello:check(C),
-	    ?SERVER ! {self(), C, S},
+	    ?SERVER ! {Ref, {self(), C, S}},
 	    chrom(C, S);
 
-	evaluate ->
-	    ?SERVER ! {self(), C, Score},
+	{Ref, evaluate} ->
+	    ?SERVER ! {Ref, {self(), C, Score}},
 	    chrom(C, Score);
 
 	{mutate, 0} ->

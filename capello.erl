@@ -64,7 +64,7 @@
 %%
 %% 4> eprof:stop_profiling()
 %%
-%% 5> eprof:total_analyse().
+%% 5> eprof:analyze().
 %% FUNCTION                                       CALLS      TIME
 %% capello:find_best_match/4                      24843333   50 %
 %% capello:diff/3                                 23161712   23 %
