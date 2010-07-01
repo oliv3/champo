@@ -43,10 +43,10 @@
 %% -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 20). %%16). %% 200). %%200000).
+-define(POP_SIZE, 1000). %%16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 2). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 5). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -295,6 +295,7 @@ extract([{_Pid, _A, S} = Element | Population], Score, CurScore) ->
 
 
 sum_scores(Results) ->
+    %% io:format("sum_scores ~p~n", [Results]),
     lists:sum([Score || {_Pid, _Alphabet, Score} <- Results]).
 
 

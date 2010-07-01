@@ -197,22 +197,20 @@ diff([H1|T1], [H2|T2], Score) ->
 
 %% Truc qui fait des calculs de distance d'un mot vs un dict
 find_best_match(String, Words) ->
-    find_best_match(String, Words, undefined, ?BEAUCOUP).
+    find_best_match(String, Words, ?BEAUCOUP).
 
-find_best_match(_String, [], undefined, _BestSoFar) ->
-    ?BEAUCOUP;
-find_best_match(_String, [], BestWord, BestSoFar) ->
-    {BestWord, BestSoFar};
-find_best_match(String, [Word|Words], BestWord, BestSoFar) ->
+find_best_match(_String, [], BestSoFar) ->
+    BestSoFar;
+find_best_match(String, [Word|Words], BestSoFar) ->
     Score = diff(String, Word),
     %% io:format("Score: ~p~n", [Score]),
     case Score of
 	0 ->
-	    {Word, 0};
+	    0;
 	S when S < BestSoFar ->
-	    find_best_match(String, Words, Word, S);
+	    find_best_match(String, Words, S);
 	_Other -> %% score superieur
-	    find_best_match(String, Words, BestWord, BestSoFar)
+	    find_best_match(String, Words, BestSoFar)
     end.
 
 %% match a list of words vs a dictionary stored in an ETS table
@@ -227,13 +225,9 @@ match(Words, List) ->
 check_sentence(Sentence, ETS) ->
     List = [W || {W} <- ets:tab2list(ETS)],
     %% io:format("Words: ~p~n", [List]),
-    %% XXX osef completement du Word retourne par match/2
-    Scores = [S || {_Word, S} <- match(Sentence, List)],
-    %% io:format("Scores: ~p -> ~p~n", [Scores, multiply(Scores)]),
+    Scores = match(Sentence, List),
+    %% io:format("Scores: ~p -> ~p~n", [Scores, lists:sum(Scores)]),
     lists:sum(Scores).
-
-%% multiply(Scores) ->
-%%     lists:foldr(fun(Elem, Acc) -> Elem * Acc end, 1, Scores).
 
 
 %%
