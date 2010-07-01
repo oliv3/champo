@@ -147,6 +147,12 @@ ts() ->
     {_Date, {Hour, Min, Sec}} = calendar:local_time(),
     io_lib:format("~2B:~2.10.0B:~2.10.0B", [Hour, Min, Sec]).
 
+receive_result() ->
+    receive
+	R ->
+	    R
+    end.
+
 loop(Pids, Gen, RunTime, NLoops) ->
     Start = now(),
 
@@ -154,9 +160,10 @@ loop(Pids, Gen, RunTime, NLoops) ->
     [Pid ! evaluate || Pid <- Pids],
 
     %% Receive evaluations
-    Evaluations = [fun() -> receive Result -> Result end end || _Pid <- Pids],
+    Evaluations = [receive_result() || _Pid <- Pids],
 
     %% Inverse scores
+    %% io:format("Evals: ~p~n", [Evaluations]),
     NegEvals = [neg_score(E) || E <- Evaluations],
 
     %% Sort by best score descending
