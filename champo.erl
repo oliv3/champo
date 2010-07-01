@@ -43,10 +43,10 @@
 %% -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 1000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 20). %%16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 5). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 2). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
@@ -128,13 +128,6 @@ stop() ->
     end.
 
 
-receive_result(Ref) ->
-    receive
-	{Ref, Result} ->
-	    Result
-    end.
-
-
 match(?WORST_GUESS_EVER) ->
     "<- Solution ";
 match(_) ->
@@ -158,13 +151,10 @@ loop(Pids, Gen, RunTime, NLoops) ->
     Start = now(),
 
     %% Ask all chroms to evaluate
-    %% XXX Ref est inutile ici, on attend N results back
-    Ref = make_ref(),
-    [Pid ! {Ref, evaluate} || Pid <- Pids],
+    [Pid ! evaluate || Pid <- Pids],
 
     %% Receive evaluations
-    %% XXX Ref inutile
-    Evaluations = [receive_result(Ref) || _Pid <- Pids],
+    Evaluations = [fun() -> receive Result -> Result end end || _Pid <- Pids],
 
     %% Inverse scores
     NegEvals = [neg_score(E) || E <- Evaluations],
@@ -321,13 +311,13 @@ chrom() ->
 
 chrom(C, Score) ->
     receive
-	{Ref, evaluate} when Score == undefined ->
+	evaluate when Score == undefined ->
 	    S = capello:check(C),
-	    ?SERVER ! {Ref, {self(), C, S}},
+	    ?SERVER ! {self(), C, S},
 	    chrom(C, S);
 
-	{Ref, evaluate} ->
-	    ?SERVER ! {Ref, {self(), C, Score}},
+	evaluate ->
+	    ?SERVER ! {self(), C, Score},
 	    chrom(C, Score);
 
 	{mutate, 0} ->
