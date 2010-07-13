@@ -18,16 +18,18 @@
 
 -compile([export_all]).
 
--export([start/0, loop/1, stop/0]).
+-export([start/0, loop/0, stop/0]).
 -export([check/1, sentence/1]).
 -export([three/1]).
 
 %% CHEAT
 -export([solve/0]).
 
+% ETS named tables
+-define(ETS_3, three).
+-define(ETS_WORDS, words).
 
 -define(SERVER, ?MODULE).
--record(state, {words, three}).
 
 %% The riddle
 %% http://www.youtube.com/watch?v=5ehHOwmQRxU
@@ -78,10 +80,9 @@ pid() ->
 
 start() ->
     io:format("[+] Loading dictionary: ", []),
-    {Words, Three} = dict_load(),
-    io:format("~p words (~p of 3 letters)~n", [ets:info(Words, size), ets:info(Three, size)]),
-    %% io:format("~p words~n", [ets:info(Words, size)]),
-    Pid = spawn(?SERVER, loop, [#state{words=Words, three=Three}]),
+    dict_load(),
+    io:format("~p words (~p of 3 letters)~n", [ets:info(?ETS_WORDS, size), ets:info(?ETS_3, size)]),
+    Pid = spawn(?SERVER, loop, []),
     register(?SERVER, Pid),
     io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
 
@@ -96,47 +97,26 @@ stop() ->
 
 
 three(Chrom) ->
-    Ref = make_ref(),
-    ?SERVER ! {self(), {Ref, three, Chrom}},
-    receive
-	{Ref, Result} ->
-	    Result
-    end.
+    TWord = translate(?WORD3, Chrom),
+    ets:lookup(?ETS_3, TWord) =/= [].
 
 
 check(Chrom) ->
-    ?SERVER ! {self(), {check, Chrom}},
-    receive
-	Result ->
-	    Result
-    end.
+    Sentence = sentence(Chrom),
+    %% io:format("Checking sentence: ~p~n", [Sentence]),
+    check_sentence(Sentence).
 
 %% ------------------------------------------------------------------
 
-loop(#state{words=Words, three=Three} = State) ->
+loop() ->
     receive
-	%% Any ->
-	%%     io:format("Got message: ~p~n", [Any]);
-
-	{Pid, {Ref, three, Chrom}} ->
-	    TWord = translate(?WORD3, Chrom),
-	    %% HERE test sur lookup =/= []
-	    In = ets:lookup(Three, TWord) =/= [],
-	    Pid ! {Ref, In};
-
-	{Pid, {check, Chrom}} ->
-	    Sentence = sentence(Chrom),
-	    %% io:format("Checking sentence: ~p~n", [Sentence]),
-	    Score = check_sentence(Sentence, Words),
-	    Pid ! Score;
-
 	{Pid, Ref, stop} ->
 	    Pid ! {Ref, stopped};
 
 	Msg ->
-	    io:format("~p got message: ~p~n", [?SERVER, Msg])
-    end,
-    ?MODULE:loop(State).
+	    io:format("~p got message: ~p~n", [?SERVER, Msg]),
+	    ?MODULE:loop()
+    end.
 
 %% ------------------------------------------------------------------
 
@@ -151,10 +131,9 @@ dict_load(File) ->
     build_ets(L3).
 
 build_ets(Words) ->
-    Tid = ets:new(words, [set]),
-    Three = ets:new(three, [set]),
-    insert(Words, Tid, Three),
-    {Tid, Three}.
+    Tid = ets:new(words, [set, named_table]),
+    Three = ets:new(three, [set, named_table]),
+    insert(Words, Tid, Three).
 
 insert([], _Tid, _Three) ->
     ok;
@@ -222,8 +201,8 @@ match(Words, List) ->
 
 
 %% Translate the riddle then returns the score
-check_sentence(Sentence, ETS) ->
-    List = [W || {W} <- ets:tab2list(ETS)],
+check_sentence(Sentence) ->
+    List = [W || {W} <- ets:tab2list(?ETS_WORDS)],
     %% io:format("Words: ~p~n", [List]),
     Scores = match(Sentence, List),
     %% io:format("Scores: ~p -> ~p~n", [Scores, lists:sum(Scores)]),

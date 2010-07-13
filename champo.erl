@@ -43,12 +43,7 @@
 %% -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 1000). %%16). %% 200). %%200000).
-
-%% Bench: version avant ETS en //:
-%% POP=1000 -> s/run
-%% Apres:
-%% POP=1000 -> s/run
+-define(POP_SIZE, 10000). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
