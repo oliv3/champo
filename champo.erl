@@ -77,7 +77,7 @@
 
 -define(H1, "         1").
 -define(H2, "12345678901234").
--define(HL, "--------------").
+-define(HR, "--------------").
 
 -define(TOP, 10). %% Top N display
 
@@ -556,7 +556,7 @@ test_mut_swap_two_genes() ->
     ?PUTSTR(?H1),
     ?PUTSTR(?H2),
     ?PUTSTR(pp(C)),
-    ?PUTSTR(?HL),
+    ?PUTSTR(?HR),
     ?PUTSTR(pp(N)),
     ok.
 
@@ -574,7 +574,7 @@ h1(Pos) ->
 h2(Pos) ->
     io:format("~s~n", [split(?H2, Pos, $|)]).
 hl(Pos) ->
-    io:format("~s~n", [split(?HL, Pos, $-)]).
+    io:format("~s~n", [split(?HR, Pos, $-)]).
 
 
 %% TODO move to utils.erl
