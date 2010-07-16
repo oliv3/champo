@@ -180,7 +180,7 @@ find_best_match(String, Words) ->
 
 find_best_match(_String, [], BestSoFar) ->
     BestSoFar;
-find_best_match(String, [Word|Words], BestSoFar) ->
+find_best_match(String, [{Word}|Words], BestSoFar) ->
     Score = diff(String, Word),
     %% io:format("Score: ~p~n", [Score]),
     case Score of
@@ -200,9 +200,10 @@ match(Words, List) ->
     [find_best_match(Word, List) || Word <- Words].
 
 
-%% Translate the riddle then returns the score
+%% Translate the riddle then return the score
 check_sentence(Sentence) ->
-    List = [W || {W} <- ets:tab2list(?ETS_WORDS)],
+    %% List = [W || {W} <- ets:tab2list(?ETS_WORDS)],
+    List = ets:tab2list(?ETS_WORDS),
     %% io:format("Words: ~p~n", [List]),
     Scores = match(Sentence, List),
     %% io:format("Scores: ~p -> ~p~n", [Scores, lists:sum(Scores)]),
@@ -214,7 +215,18 @@ check_sentence(Sentence) ->
 %%
 -define(SOLUTION, list_to_tuple("amoneprtgskdli")).
 
+riddle() ->
+    ?RIDDLE.
+
+solution() ->
+    ?SOLUTION.
+
 solve() ->
-    Riddle = ?RIDDLE,
-    Solution = ?SOLUTION,
+    Riddle = riddle(),
+    Solution = solution(),
+    io:format("Testing solution: ~p~nWith the riddle: ~p~n", [champo:pp(Solution), Riddle]),
+    Decrypted = sentence(Solution),
+    io:format("Decrypted: ~p~n", [Decrypted]),
+    Matches = [W || W <- Decrypted],
+    io:format("Matching words: ~p~n", [Matches]),
     wip.

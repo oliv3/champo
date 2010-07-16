@@ -39,18 +39,19 @@
 %%
 
 -compile([export_all]). %% debug
+-export([mate/4]).
 
-%% -export([chrom/0, chrom/2]).
+-export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 10000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 1000). %%16). %% 200). %%200000).
 
 %% Mutations
--define(P_MUTATION, 100). %%1000). %% 1 chance sur 1000
+-define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
--define(TOS, 5). %% 30). %% seconds
+-define(TOS, 3). %% 30). %% seconds
 -define(TOM, ?TOS*1000).
 
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
@@ -89,9 +90,9 @@ worst() ->
     io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
 
 new_chrom() ->
-    spawn(fun () -> (?MODULE):chrom() end).
+    spawn(?MODULE, chrom, []).
 new_chrom(C) ->
-    spawn(fun () -> (?MODULE):chrom(C, undefined) end).
+    spawn(?MODULE, chrom, [C, undefined]).
 
 
 %% for eprof
@@ -186,6 +187,17 @@ loop(Pids, Gen, RunTime, NLoops) ->
 	    restart(Gen, RunTime, NLoops, Results, Start)
     end.
 
+receive_refs(Refs) ->
+    %% io:format("Waiting for ~p refs (~p)~n", [length(Refs), Refs]),
+    receive_refs(Refs, []).
+receive_refs([], Pids) ->
+    Pids;
+receive_refs([Ref|Refs], Acc) ->
+    receive
+	{Ref, Pids} ->
+	    receive_refs(Refs, [Pids | Acc])
+    end.
+
 restart(Gen, RunTime, NLoops, Results, Start) ->
     %% Divide poulation in two
     %% TODO ? garder 25% et regénérer 75% ?
@@ -198,7 +210,12 @@ restart(Gen, RunTime, NLoops, Results, Start) ->
     SumScores = sum_scores(Winners),
 
     %% Create new population
-    NewPids = new_population(?H_POP_SIZE, Winners, SumScores, [Pid || {Pid, _A, _S} <- Winners]),
+    Refs = new_population(?H_POP_SIZE, Winners, SumScores),
+    ChildrenPids = receive_refs(Refs),
+    %% io:format("[i] ChildrenPids: ~p~n", [ChildrenPids]),
+    WinnersPids = [Pid || {Pid, _Alphabet, _Score} <- Winners],
+    NewPids = lists:flatten([WinnersPids|ChildrenPids]),
+    %% io:format("[i] NewPids: ~p~n", [NewPids]),
 
     %% Stats
     Now = now(),
@@ -245,12 +262,23 @@ neg_score({Pid, Alphabet, Score}) ->
 
 
 %% version avec roulette
+%%
+%% TODO: spawner les process
+new_population(N, Population, MaxScore) ->
+    new_population(N, Population, MaxScore, []).
 new_population(0, _Population, _MaxScore, Acc) ->
     Acc;
 new_population(N, Population, MaxScore, Acc) ->
     {Parent1Pid, Chrom1, _S} = roulette(Population, MaxScore, undefined),
     {_Parent2Pid, Chrom2, _S2} = roulette(Population, MaxScore, Parent1Pid),
+    Ref = make_ref(),
+    %% tidier
+    V = self(),
+    spawn(fun() -> (?MODULE):mate(V, Ref, Chrom1, Chrom2) end),
+    %% spawn(?MODULE, mate, [self(), Ref, Chrom1, Chrom2]),
+    new_population(N-2, Population, MaxScore, [Ref | Acc]).
 
+mate(Pid, Ref, Chrom1, Chrom2) ->
     {_, _, MS} = now(),
     Parents = {Chrom1, Chrom2},
     {Child1, Child2} = case MS rem 2 of
@@ -263,7 +291,7 @@ new_population(N, Population, MaxScore, Acc) ->
     Pid2 = new_chrom(Child2),
     maybe_mutate(Pid1),
     maybe_mutate(Pid2),
-    new_population(N-2, Population, MaxScore, [Pid1, Pid2 | Acc]).
+    Pid ! {Ref, [Pid1, Pid2]}.
 
 
 roulette(Population, MaxScore, NotThisPid) ->
@@ -369,6 +397,7 @@ to_char(X) ->
     $a + (X rem 26).
 
 create() ->
+    %% random().
     Chrom = random(),
     case capello:three(Chrom) of
 	true ->

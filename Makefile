@@ -1,6 +1,7 @@
 all: champo.beam capello.beam
 
-#OPTIMS=+native +hipe
+# FIXME wtf hipe is not enabled on obiwan ?!
+#OPTIMS=+native
 
 %.beam: %.erl
 	erlc $(OPTIMS) $<
