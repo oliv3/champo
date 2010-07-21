@@ -201,6 +201,10 @@ match(Words, List) ->
 
 
 %% Translate the riddle then return the score
+%% XXX FIXME faire un traversal de la table ETS
+%% XXX et pas un tab2list qui visiblement pulvérise
+%% XXX la RAM quand tapé par quelques milliers de process
+%% XXX fin du XXX
 check_sentence(Sentence) ->
     %% List = [W || {W} <- ets:tab2list(?ETS_WORDS)],
     List = ets:tab2list(?ETS_WORDS),
