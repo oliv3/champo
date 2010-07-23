@@ -162,54 +162,52 @@ sentence(Chrom) ->
 
 %% diff entre 2 strings
 %% ~= algo de Hamming
-diff(Str1, Str2) when length(Str1) =/= length(Str2) ->
-    undefined;
+%% diff(Str1, Str2) when length(Str1) =/= length(Str2) ->
+%%     undefined;
+diff(Str, Str) ->
+    0;
 diff(Str1, Str2) ->
     diff(Str1, Str2, 0).
 
-diff(Str, Str, Score) ->
-    Score;
+%% diff(Str, Str, Score) ->
+%%     Score;
 diff([], [], Score) ->
     Score;
 diff([H1|T1], [H2|T2], Score) ->
     diff(T1, T2, Score + abs(H1-H2)).
 
 %% Truc qui fait des calculs de distance d'un mot vs un dict
-find_best_match(String, Words) ->
-    find_best_match(String, Words, ?BEAUCOUP).
+find_best_match(String, Key) ->
+    find_best_match(String, Key, ?BEAUCOUP).
 
-find_best_match(_String, [], BestSoFar) ->
+find_best_match(_String, '$end_of_table', BestSoFar) ->
     BestSoFar;
-find_best_match(String, [{Word}|Words], BestSoFar) ->
-    Score = diff(String, Word),
+find_best_match(String, Key, BestSoFar) when length(String) =/= length(Key) ->
+    find_best_match(String, next(Key), BestSoFar);
+find_best_match(String, Key, BestSoFar) ->
+    Score = diff(String, Key),
     %% io:format("Score: ~p~n", [Score]),
     case Score of
 	0 ->
 	    0;
 	S when S < BestSoFar ->
-	    find_best_match(String, Words, S);
+	    find_best_match(String, next(Key), S);
 	_Other -> %% score superieur
-	    find_best_match(String, Words, BestSoFar)
+	    find_best_match(String, next(Key), BestSoFar)
     end.
 
+next(Key) ->
+    ets:next(?ETS_WORDS, Key).
+
 %% match a list of words vs a dictionary stored in an ETS table
-%% TODO mettre l'enigme au format {Len, [Letters]}
-%% pour eviter l'appel a length a chaque fois
-%% (et dans la version ETS, taper dans la bonne table)
-match(Words, List) ->
-    [find_best_match(Word, List) || Word <- Words].
+match(Words, Key) ->
+    [find_best_match(Word, Key) || Word <- Words].
 
 
 %% Translate the riddle then return the score
-%% XXX FIXME faire un traversal de la table ETS
-%% XXX et pas un tab2list qui visiblement pulvérise
-%% XXX la RAM quand tapé par quelques milliers de process
-%% XXX fin du XXX
 check_sentence(Sentence) ->
-    %% List = [W || {W} <- ets:tab2list(?ETS_WORDS)],
-    List = ets:tab2list(?ETS_WORDS),
-    %% io:format("Words: ~p~n", [List]),
-    Scores = match(Sentence, List),
+    Key = ets:first(?ETS_WORDS),
+    Scores = match(Sentence, Key),
     %% io:format("Scores: ~p -> ~p~n", [Scores, lists:sum(Scores)]),
     lists:sum(Scores).
 

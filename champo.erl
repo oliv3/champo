@@ -3,7 +3,7 @@
 
 -include("champo.hrl").
 
--define(USE_HINT, true). %% Use the "amon" word hint
+%% -define(USE_HINT, true). %% Use the "amon" word hint
 
 %% TODO: Evaluations, travailler juste avec {Pid, Score}, l'alphabet osef
 
@@ -38,14 +38,14 @@
 -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 100). %%16). %% 200). %%200000).
+-define(POP_SIZE, 100000). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
 -define(NB_MUTATIONS, 6).
 
 %% CPU cooling pauses
--define(TOS, 3). %% 30). %% seconds
+-define(TOS, 5). %% 30). %% seconds
 -define(TOM, ?TOS*1000).
 
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
@@ -391,14 +391,15 @@ to_char(X) ->
     $a + (X rem 26).
 
 create() ->
-    %% random().
-    Chrom = random(),
-    case capello:three(Chrom) of
-	true ->
-	    Chrom;
-	false ->
-	    create()
-    end.
+    random().
+    %% full_random().
+    %% Chrom = random(),
+    %% case capello:three(Chrom) of
+    %% 	true ->
+    %% 	    Chrom;
+    %% 	false ->
+    %% 	    create()
+    %% end.
 
 -ifdef(USE_HINT).
 random() ->
@@ -415,6 +416,13 @@ random(Size, Acc, N, Chars) ->
     Elem = lists:nth(Pos, Chars),
     NewChars = Chars -- [Elem],
     random(Size-1, [Elem|Acc], N-1, NewChars).
+
+full_random() ->
+    %% TODO un binary comprehension
+    Bin = crypto:rand_bytes(?ALPHABET_SIZE),
+    L1 = binary_to_list(Bin),
+    L2 = [to_char(C) || C <- L1],
+    list_to_tuple(L2).
 
 
 t2b(X) ->
