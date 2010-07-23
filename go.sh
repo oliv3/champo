@@ -1,5 +1,3 @@
 #!/bin/sh
 reset
-#erl -sname champo +K true +P 50000 -s champo $@
-#erl -sname champo -s champo $@
-erl -s champo $@
+erl +A 4 -sname champo +K true +P 2000000 -s champo $@
