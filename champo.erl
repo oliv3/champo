@@ -521,7 +521,7 @@ mut_randomize_full() ->
     ?MUT("[m] Randomize chromosome full: ~p~n", [pp(C)]),
     C.
 
-%% 4. Radomize only one char
+%% 4. Randomize only one char
 mut_randomize_one(C) ->
     Position = crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1,
     <<NewChar>> = crypto:rand_bytes(1),
