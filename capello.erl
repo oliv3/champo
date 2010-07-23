@@ -84,7 +84,7 @@ start() ->
     io:format("~p words (~p of 3 letters)~n", [ets:info(?ETS_WORDS, size), ets:info(?ETS_3, size)]),
     Pid = spawn(?SERVER, loop, []),
     register(?SERVER, Pid),
-    io:format("[i] ~p module started, pid ~p~n", [?SERVER, Pid]).
+    io:format("[i] Dictionary module started, pid ~p~n", [Pid]).
 
 
 stop() ->

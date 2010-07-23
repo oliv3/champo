@@ -5,12 +5,6 @@
 
 -define(USE_HINT, true). %% Use the "amon" word hint
 
-%% TODO: simplifier la fonction de fitness (capello): plus de diff entre
-%% les strings, retourner 1 si le mot est dans le dico, 0 sinon...
-%% du coup ca va simplifier pas mal la bete...
-
-%% TODO: lancer la generation en croisant en // (popsize/2/2 threads)
-
 %% TODO: Evaluations, travailler juste avec {Pid, Score}, l'alphabet osef
 
 %% XXX FIXME
@@ -44,7 +38,7 @@
 -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 4000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 100). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
@@ -114,7 +108,7 @@ start(NLoops) ->
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
 
     register(?SERVER, self()),
-    io:format("[i] main loop pid: ~p~n", [self()]),
+    io:format("[i] Main loop pid: ~p~n", [self()]),
 
     %% Start GA
     loop(Pids, 1, 0, NLoops).
