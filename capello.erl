@@ -162,10 +162,10 @@ sentence(Chrom) ->
 
 %% diff entre 2 strings
 %% ~= algo de Hamming
-diff(Str1, Str2) when length(Str1) =:= length(Str2) ->
-    diff(Str1, Str2, 0);
-diff(_Truc1, _Truc2) ->
-    undefined.
+diff(Str1, Str2) when length(Str1) =/= length(Str2) ->
+    undefined;
+diff(Str1, Str2) ->
+    diff(Str1, Str2, 0).
 
 diff(Str, Str, Score) ->
     Score;
