@@ -3,7 +3,7 @@
 
 -include("champo.hrl").
 
-%% -define(USE_HINT, true). %% Use the "amon" word hint
+-define(USE_HINT, true). %% Use the "amon" word hint
 
 %% TODO: Evaluations, travailler juste avec {Pid, Score}, l'alphabet osef
 
@@ -38,7 +38,7 @@
 -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 100000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 20). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
@@ -135,7 +135,15 @@ flatten([Last], Acc) ->
 flatten([Word|Words], Acc) ->
     flatten(Words, Acc ++ Word ++ " ").
 
-display({_Pid, C, Score}) ->
+%% TODO chrom:display(Pid)
+display({Pid, Score}) ->
+    S = self(),
+    Ref = make_ref(),
+    Pid ! {S, Ref, get},
+    C = receive
+	    {Ref, Alphabet} ->
+		Alphabet
+	end,
     io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(capello:sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
 
 ts() ->
@@ -163,7 +171,7 @@ loop(Pids, Gen, RunTime, NLoops) ->
     NegEvals = [neg_score(E) || E <- Evaluations],
 
     %% Sort by best score descending
-    Results = lists:reverse(lists:keysort(3, NegEvals)),
+    Results = lists:reverse(lists:keysort(2, NegEvals)),
 
     %% Display Top N
     Top = top(Results),
@@ -198,7 +206,7 @@ restart(Gen, RunTime, NLoops, Results, Start) ->
     {Winners, Losers} = lists:split(?H_POP_SIZE, Results),
 
     %% Kill losers
-    [LoserPid ! die || {LoserPid, _Alphabet, _Score} <- Losers],
+    [LoserPid ! die || {LoserPid, _Score} <- Losers],
 
     %% Compute score of all the winners
     SumScores = sum_scores(Winners),
@@ -207,7 +215,7 @@ restart(Gen, RunTime, NLoops, Results, Start) ->
     Refs = new_population(?H_POP_SIZE, Winners, SumScores),
     ChildrenPids = receive_refs(Refs),
     %% io:format("[i] ChildrenPids: ~p~n", [ChildrenPids]),
-    WinnersPids = [Pid || {Pid, _Alphabet, _Score} <- Winners],
+    WinnersPids = [Pid || {Pid, _Score} <- Winners],
     NewPids = lists:flatten([WinnersPids|ChildrenPids]),
     %% io:format("[i] NewPids: ~p~n", [NewPids]),
 
@@ -227,7 +235,7 @@ restart(Gen, RunTime, NLoops, Results, Start) ->
 			N -1
 		end,
     if
-	NewNLoops > 0 -> %% heureusement (infinity > 0) == true :)
+	NewNLoops > 0 -> %% heureusement (infinity > 0) =:= true :)
 	    ?MODULE:loop(NewPids, Gen+1, Elapsed, NewNLoops);
 	true ->
 	    io:format("[i] Exiting at generation ~p~n", [Gen]),
@@ -251,8 +259,8 @@ top(List) ->
     L1.
 
 
-neg_score({Pid, Alphabet, Score}) ->
-    {Pid, Alphabet, ?WORST_GUESS_EVER-Score}.
+neg_score({Pid, Score}) ->
+    {Pid, ?WORST_GUESS_EVER-Score}.
 
 
 %% version avec roulette
@@ -263,17 +271,28 @@ new_population(N, Population, MaxScore) ->
 new_population(0, _Population, _MaxScore, Acc) ->
     Acc;
 new_population(N, Population, MaxScore, Acc) ->
-    {Parent1Pid, Chrom1, _S} = roulette(Population, MaxScore, undefined),
-    {_Parent2Pid, Chrom2, _S2} = roulette(Population, MaxScore, Parent1Pid),
+    {Parent1, _S1} = roulette(Population, MaxScore, undefined),
+    {Parent2, _S2} = roulette(Population, MaxScore, Parent1),
     Ref = make_ref(),
-    %% tidier
     V = self(),
-    spawn(fun() -> (?MODULE):mate(V, Ref, Chrom1, Chrom2) end),
-    %% spawn(?MODULE, mate, [self(), Ref, Chrom1, Chrom2]),
+    spawn(fun() -> (?MODULE):mate(V, Ref, Parent1, Parent2) end),
     new_population(N-2, Population, MaxScore, [Ref | Acc]).
 
-mate(Pid, Ref, Chrom1, Chrom2) ->
+mate(Pid, Ref, Parent1, Parent2) ->
     {_, _, MS} = now(),
+    S = self(),
+    Ref1 = make_ref(),
+    Ref2 = make_ref(),
+    Parent1 ! {S, Ref1, get}, %% TODO Chrom1 = chrom:get(Pid)
+    Parent2 ! {S, Ref2, get},
+    Chrom1 = receive
+		 {Ref1, C1} ->
+		     C1
+	     end,
+    Chrom2 = receive
+		 {Ref2, C2} ->
+		     C2
+	     end,
     Parents = {Chrom1, Chrom2},
     {Child1, Child2} = case MS rem 2 of
 			   0 ->
@@ -290,22 +309,29 @@ mate(Pid, Ref, Chrom1, Chrom2) ->
 
 roulette(Population, MaxScore, NotThisPid) ->
     Score = crypto:rand_uniform(0, MaxScore),
-    {Pid, _A, _S} = This = extract(Population, Score),
+    {Pid, _S} = This = extract(Population, Score),
     if
-	Pid == NotThisPid ->
+	Pid =:= NotThisPid ->
 	    roulette(Population, MaxScore, NotThisPid);
 	true ->
 	    This
     end.
 
 
-f({_Pid, Alphabet, _Score}) ->
-    pp(Alphabet).
+%% f({Pid, _Score}) ->
+%%     S = self(),
+%%     Ref = make_ref(),
+%%     Pid ! {S, Ref, get},
+%%     Alphabet = receive
+%% 		   {Ref, A} ->
+%% 		       A
+%% 	       end,
+%%     pp(Alphabet).
 
 
 extract(Population, Score) ->
     extract(Population, Score, 0).
-extract([{_Pid, _A, S} = Element | Population], Score, CurScore) ->
+extract([{_Pid, S} = Element | Population], Score, CurScore) ->
     NewScore = CurScore + S,
     if
 	NewScore >= Score ->
@@ -319,7 +345,7 @@ extract([{_Pid, _A, S} = Element | Population], Score, CurScore) ->
 
 sum_scores(Results) ->
     %% io:format("sum_scores ~p~n", [Results]),
-    lists:sum([Score || {_Pid, _Alphabet, Score} <- Results]).
+    lists:sum([Score || {_Pid, Score} <- Results]).
 
 
 maybe_mutate(Pid) ->
@@ -342,13 +368,22 @@ chrom() ->
 
 chrom(C, Score) ->
     receive
-	{Ref, evaluate} when Score == undefined ->
+	%% when needed
+	{Pid, Ref, get} ->
+	    Pid ! {Ref, C},
+	    chrom(C, Score);
+
+	{Ref, evaluate} when Score =:= undefined ->
 	    S = capello:check(C),
-	    ?SERVER ! {Ref, {self(), C, S}},
+	    %% TODO/WIP we don't return C anymore
+	    %% ?SERVER ! {Ref, {self(), C, S}},
+	    ?SERVER ! {Ref, {self(), S}},
 	    chrom(C, S);
 
 	{Ref, evaluate} ->
-	    ?SERVER ! {Ref, {self(), C, Score}},
+	    %% TODO/WIP we don't return C anymore
+	    %% ?SERVER ! {Ref, {self(), C, Score}},
+	    ?SERVER ! {Ref, {self(), Score}},
 	    chrom(C, Score);
 
 	{mutate, 0} ->
@@ -391,15 +426,15 @@ to_char(X) ->
     $a + (X rem 26).
 
 create() ->
-    random().
+    %% random().
     %% full_random().
-    %% Chrom = random(),
-    %% case capello:three(Chrom) of
-    %% 	true ->
-    %% 	    Chrom;
-    %% 	false ->
-    %% 	    create()
-    %% end.
+    Chrom = random(),
+    case capello:three(Chrom) of
+	true ->
+	    Chrom;
+	false ->
+	    create()
+    end.
 
 -ifdef(USE_HINT).
 random() ->
@@ -593,7 +628,7 @@ random2() ->
 random2(Rnd1) ->
     Rnd2 = rnd_pos(),
     if
-	Rnd1 == Rnd2 ->
+	Rnd1 =:= Rnd2 ->
 	    random2(Rnd1);
 	true ->
 	    {Rnd1, Rnd2}

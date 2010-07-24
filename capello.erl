@@ -137,7 +137,7 @@ build_ets(Words) ->
 
 insert([], _Tid, _Three) ->
     ok;
-insert([Word|Words], Tid, Three) when length(Word) == 3->
+insert([Word|Words], Tid, Three) when length(Word) =:= 3->
     true = ets:insert(Tid, {Word}),
     true = ets:insert(Three, {Word}),
     insert(Words, Tid, Three);
