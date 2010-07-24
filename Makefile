@@ -1,4 +1,4 @@
-all: champo.beam capello.beam
+all: champo.beam capello.beam chrom.beam
 
 # FIXME wtf hipe is not enabled on obiwan ?!
 #OPTIMS=+native +hipe
