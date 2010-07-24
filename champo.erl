@@ -5,8 +5,6 @@
 
 -define(USE_HINT, true). %% Use the "amon" word hint
 
-%% TODO: Evaluations, travailler juste avec {Pid, Score}, l'alphabet osef
-
 %% XXX FIXME
 %% [C] Alphabet: "amoneprtgskcli" => "amon me protege sekmet me garce en son temple oriental" <- Solution (103485299115558197372) (4)
 %% deja pourquoi ca fait 4 au lieu de 2 ? (garce/garde (delta=1, +1 => 2))
@@ -20,9 +18,6 @@
 %%
 %% => 141167095653376 si on prend l'indice "amon" (26^10).
 
-%%
-%% TODO
-%% WTF sur un core 2 utilise que 50% du CPU ?!
 %%
 %% save/load d'une population (liste de chroms dans un binary term)
 %%
@@ -38,7 +33,7 @@
 -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 20). %%16). %% 200). %%200000).
+-define(POP_SIZE, 1000). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
