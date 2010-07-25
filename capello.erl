@@ -81,7 +81,7 @@ pid() ->
 start() ->
     io:format("[+] Loading dictionary: ", []),
     dict_load(),
-    io:format("~p words (~p trigrams)~n", [ets:info(?ETS_WORDS, size), ets:info(?ETS_3, size)]),
+    io:format("~p words (~p 3-letter words)~n", [ets:info(?ETS_WORDS, size), ets:info(?ETS_3, size)]),
     Pid = spawn(?SERVER, loop, []),
     register(?SERVER, Pid),
     io:format("[i] Dictionary module started, pid ~p~n", [Pid]).

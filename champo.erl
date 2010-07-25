@@ -424,8 +424,8 @@ create() ->
     Chrom = random(),
 
     %% FIXME si on utilise le hint on ne checkera qu'un seul
-    %% trigram dont on connait deja 2 caracteres: "?on"
-    %% solution: utiliser three si on n'utilise pas le hint
+    %% mot de 3 lettres dont on connait deja 2 caracteres: "?on"
+    %% solution: utiliser capello:three/1 si on n'utilise pas le hint
     case capello:three(Chrom) of
 	true ->
 	    Chrom;
