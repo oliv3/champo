@@ -229,6 +229,7 @@ solve() ->
     io:format("Testing solution: ~p~nWith the riddle: ~p~n", [champo:pp(Solution), Riddle]),
     Decrypted = sentence(Solution),
     io:format("Decrypted: ~p~n", [Decrypted]),
-    Matches = [W || W <- Decrypted],
+    Key = ets:first(?ETS_WORDS),
+    Matches = match(Decrypted, Key),
     io:format("Matching words: ~p~n", [Matches]),
     wip.

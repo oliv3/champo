@@ -3,7 +3,7 @@
 
 -include("champo.hrl").
 
--define(USE_HINT, true). %% Use the "amon" word hint
+%% -define(USE_HINT, true). %% Use the "amon" word hint
 
 %% XXX FIXME
 %% [C] Alphabet: "amoneprtgskcli" => "amon me protege sekmet me garce en son temple oriental" <- Solution (103485299115558197372) (4)
@@ -33,7 +33,7 @@
 -export([chrom/0, chrom/2]).
 
 %% GA parameters
--define(POP_SIZE, 1000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 10000). %%16). %% 200). %%200000).
 
 %% Mutations
 -define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
