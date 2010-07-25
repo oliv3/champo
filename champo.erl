@@ -5,10 +5,6 @@
 
 %% -define(USE_HINT, true). %% Use the "amon" word hint
 
-%% XXX FIXME
-%% [C] Alphabet: "amoneprtgskcli" => "amon me protege sekmet me garce en son temple oriental" <- Solution (103485299115558197372) (4)
-%% deja pourquoi ca fait 4 au lieu de 2 ? (garce/garde (delta=1, +1 => 2))
-
 %% Nombre de solutions a ce pb: 26^14
 %%
 %% > math:pow(26,14).
@@ -21,10 +17,7 @@
 %%
 %% save/load d'une population (liste de chroms dans un binary term)
 %%
-%% modules "chrom" "config"
-%%
-%% Lors du display des stats/time, rajouter le timestamp / human readable
-%% eg ala syslog
+%% module "config"
 %%
 
 -compile([export_all]). %% debug
