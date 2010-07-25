@@ -9,7 +9,7 @@
 %% [C] Alphabet: "amoneprtgskcli" => "amon me protege sekmet me garce en son temple oriental" <- Solution (103485299115558197372) (4)
 %% deja pourquoi ca fait 4 au lieu de 2 ? (garce/garde (delta=1, +1 => 2))
 
-%% Nombre de solutions à ce pb: 26^14
+%% Nombre de solutions a ce pb: 26^14
 %%
 %% > math:pow(26,14).
 %% 6.450997470329715e19
@@ -58,8 +58,6 @@
 	  ?WORST(3) +
 	  ?WORST(6) +
 	  ?WORST(8)
-%%          - 3 %% Un jour on m'expliquera pourquoi
-%%	  	%% ca renvoie '4' sur un exact match au lieu de 1
 	 )).
 
 -define(SERVER, ?MODULE).
