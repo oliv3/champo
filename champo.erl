@@ -422,6 +422,9 @@ create() ->
     %% random().
     %% full_random().
     Chrom = random(),
+
+    %% FIXME si on utilise le hint on ne checkera qu'un seul
+    %% trigram dont on connait deja 2 caracteres: ?on
     case capello:three(Chrom) of
 	true ->
 	    Chrom;
