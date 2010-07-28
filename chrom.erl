@@ -3,13 +3,13 @@
 
 -include("champo.hrl").
 
--compile([export_all]). %% easy debugging
 -export([new/0, new/1, loop/2, delete/1]).
 -export([get/1, display/1]).
 
-%% -define(USE_HINT, true). %% Use the "amon" word hint
+-define(USE_HINT, true). %% Use the "amon" word hint
+-define(HINT, "noma"). %% "amon" reversed
+-define(HINT_LENGTH, length(?HINT)).
 
--define(TODO, 'TODO'). %% TODO remove when finished
 -define(PUTSTR(X), io:format("~s~n", [X])).
 
 
@@ -26,27 +26,31 @@ delete(Pid) ->
     Pid ! die.
 
 
-get(_Pid) ->
-    ?TODO.
+get(Pid) ->
+    %% TODO noneed Ref
+    S = self(),
+    %% Ref = make_ref(),
+    %% Pid ! {S, Ref, get},
+    Pid ! {S, get},
+    receive
+	%% {Ref, Alpha} ->
+	{value, Alpha} ->
+	    Alpha
+    end.
 
 
 display({Pid, Score}) ->
-    S = self(),
-    %% TODO noneed Ref
-    Ref = make_ref(),
-    Pid ! {S, Ref, get},
-    Alpha = receive
-		{Ref, A} ->
-		    A
-	end,
+    Alpha = ?MODULE:get(Pid),
     io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n",
 	      [?PP(Alpha), flatten(capello:sentence(Alpha)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
 
 
 loop(Alpha, Score) ->
     receive
-	{Pid, Ref, get} ->
-	    Pid ! {Ref, Alpha},
+	%% {Pid, Ref, get} ->
+	{Pid, get} ->
+	    %% Pid ! {Ref, Alpha},
+	    Pid ! {value, Alpha},
 	    loop(Alpha, Score);
 
 	{Pid, Ref, evaluate} when Score =:= undefined ->

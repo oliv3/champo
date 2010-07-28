@@ -3,6 +3,18 @@
 
 -include("champo.hrl").
 
+%% Module API
+-export([start/0, start/1, stop/0]).
+
+%% Internal exports
+-export([mate/4]).
+
+%% Profiling
+-export([pid/0]).
+
+%% Tests
+-export([test_xover1/0, test_xover2/0]).
+
 %% Nombre de solutions a ce pb: 26^14
 %%
 %% > math:pow(26,14).
@@ -18,33 +30,23 @@
 %% module "config"
 %%
 
--compile([export_all]). %% debug
--export([mate/4]).
-
 %% GA parameters
--define(POP_SIZE, 1000).
+-define(POP_SIZE, 1000). %%1000).
 
 %% Mutations
 -define(P_MUTATION, 10).
 
 %% CPU cooling pauses
--define(TOS, 1). %% 30). %% seconds
+-define(TOS, 3). %% seconds
 -define(TOM, ?TOS*1000).
 
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
 -define(SERVER, ?MODULE).
 
--define(TOP, 10). %% Top N display
+-define(TOP, 20). %% Top N display
 
--define(HINT, "noma"). %% "amon" reversed
--define(HINT_LENGTH, length(?HINT)).
 
-%% debug
-worst() ->
-    io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
-
-%% for eprof
 pid() ->
     whereis(?SERVER).
 
@@ -169,7 +171,7 @@ restart(Gen, RunTime, NLoops, Results, Start) ->
 		end,
     if
 	NewNLoops > 0 -> %% heureusement (infinity > 0) =:= true :)
-	    ?MODULE:loop(NewPids, Gen+1, Elapsed, NewNLoops);
+	    loop(NewPids, Gen+1, Elapsed, NewNLoops);
 	true ->
 	    io:format("[i] Exiting at generation ~p~n", [Gen]),
 	    [Pid ! die || Pid <- NewPids],
@@ -196,9 +198,8 @@ neg_score({Pid, Score}) ->
     {Pid, ?WORST_GUESS_EVER-Score}.
 
 
-%% version avec roulette
 %%
-%% TODO: spawner les process
+%% Create a new population
 new_population(N, Population, MaxScore) ->
     new_population(N, Population, MaxScore, []).
 new_population(0, _Population, _MaxScore, Acc) ->
@@ -213,19 +214,8 @@ new_population(N, Population, MaxScore, Acc) ->
 
 mate(Pid, Ref, Parent1, Parent2) ->
     {_, _, MS} = now(),
-    S = self(),
-    Ref1 = make_ref(),
-    Ref2 = make_ref(),
-    Parent1 ! {S, Ref1, get}, %% TODO Chrom1 = chrom:get(Pid)
-    Parent2 ! {S, Ref2, get},
-    Chrom1 = receive
-		 {Ref1, C1} ->
-		     C1
-	     end,
-    Chrom2 = receive
-		 {Ref2, C2} ->
-		     C2
-	     end,
+    Chrom1 = chrom:get(Parent1),
+    Chrom2 = chrom:get(Parent2),
     Parents = {Chrom1, Chrom2},
     {Child1, Child2} = case MS rem 2 of
 			   0 ->
@@ -367,17 +357,16 @@ test_xover2() ->
     io:format("Child2:  ~p~n", [?PP(C2)]).
 
 
-split(String, Pos, Delim) ->
-    {L, R} = lists:split(Pos, String),
-    S = io_lib:format("~s~c~s", [L, Delim, R]),
-    %% lists:flatten(S).
-    S.
+%% split(String, Pos, Delim) ->
+%%     {L, R} = lists:split(Pos, String),
+%%     S = io_lib:format("~s~c~s", [L, Delim, R]),
+%%     %% lists:flatten(S).
+%%     S.
 
 
-
-h1(Pos) ->
-    io:format("~s~n", [split(?H1, Pos, $ )]).
-h2(Pos) ->
-    io:format("~s~n", [split(?H2, Pos, $|)]).
-hl(Pos) ->
-    io:format("~s~n", [split(?HR, Pos, $-)]).
+%% h1(Pos) ->
+%%     io:format("~s~n", [split(?H1, Pos, $ )]).
+%% h2(Pos) ->
+%%     io:format("~s~n", [split(?H2, Pos, $|)]).
+%% hl(Pos) ->
+%%     io:format("~s~n", [split(?HR, Pos, $-)]).

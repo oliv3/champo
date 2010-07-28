@@ -16,14 +16,15 @@
 %%
 -include("champo.hrl").
 
--compile([export_all]).
-
 -export([start/0, loop/0, stop/0]).
 -export([check/1, sentence/1]).
 -export([three/1]).
 
-%% CHEAT
+%% Debug
 -export([solve/0]).
+
+%% Profiling
+-export([pid/0]).
 
 % ETS named tables
 -define(ETS_3, three).
