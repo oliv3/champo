@@ -3,8 +3,6 @@
 
 -include("champo.hrl").
 
-%% -define(USE_HINT, true). %% Use the "amon" word hint
-
 %% Nombre de solutions a ce pb: 26^14
 %%
 %% > math:pow(26,14).
@@ -23,57 +21,28 @@
 -compile([export_all]). %% debug
 -export([mate/4]).
 
--export([chrom/0, chrom/2]).
-
 %% GA parameters
--define(POP_SIZE, 10000). %%16). %% 200). %%200000).
+-define(POP_SIZE, 1000).
 
 %% Mutations
--define(P_MUTATION, 10). %%1000). %% 1 chance sur 1000
--define(NB_MUTATIONS, 6).
+-define(P_MUTATION, 10).
 
 %% CPU cooling pauses
--define(TOS, 5). %% 30). %% seconds
+-define(TOS, 1). %% 30). %% seconds
 -define(TOM, ?TOS*1000).
 
 -define(H_POP_SIZE, (?POP_SIZE bsr 1)).
 
--define(WORST(X), (X*25)).
-
--define(WORST_GUESS_EVER, (
-	  ?WORST(4) +
-	  ?WORST(2) +
-	  ?WORST(7) +
-	  ?WORST(6) +
-	  ?WORST(2) +
-	  ?WORST(5) +
-	  ?WORST(2) +
-	  ?WORST(3) +
-	  ?WORST(6) +
-	  ?WORST(8)
-	 )).
-
 -define(SERVER, ?MODULE).
 
--define(H1, "         1").
--define(H2, "12345678901234").
--define(HR, "--------------").
-
 -define(TOP, 10). %% Top N display
-
--define(PUTSTR(X), io:format("~s~n", [X])).
 
 -define(HINT, "noma"). %% "amon" reversed
 -define(HINT_LENGTH, length(?HINT)).
 
+%% debug
 worst() ->
     io:format("Worst guess ever: ~p~n", [?WORST_GUESS_EVER]).
-
-new_chrom() ->
-    spawn(?MODULE, chrom, []).
-new_chrom(C) ->
-    spawn(?MODULE, chrom, [C, undefined]).
-
 
 %% for eprof
 pid() ->
@@ -90,7 +59,7 @@ start(NLoops) ->
     capello:start(),
 
     %% Create initial population
-    Pids = [new_chrom() || _Counter <- lists:seq(1, ?POP_SIZE)],
+    Pids = [chrom:new() || _Counter <- lists:seq(1, ?POP_SIZE)],
     io:format("[+] ~p chromosomes created~n", [length(Pids)]),
 
     register(?SERVER, self()),
@@ -109,29 +78,6 @@ stop() ->
     end.
 
 
-match(?WORST_GUESS_EVER) ->
-    "<- Solution ";
-match(_) ->
-    "".
-
-flatten(List) ->
-    flatten(List, "").
-flatten([Last], Acc) ->
-    Acc ++ Last;
-flatten([Word|Words], Acc) ->
-    flatten(Words, Acc ++ Word ++ " ").
-
-%% TODO chrom:display(Pid)
-display({Pid, Score}) ->
-    S = self(),
-    Ref = make_ref(),
-    Pid ! {S, Ref, get},
-    C = receive
-	    {Ref, Alphabet} ->
-		Alphabet
-	end,
-    io:format("[C] Alphabet: ~p => ~p ~s(~p) (~p)~n", [pp(C), flatten(capello:sentence(C)), match(Score), Score, ?WORST_GUESS_EVER-Score]).
-
 ts() ->
     {_Date, {Hour, Min, Sec}} = calendar:local_time(),
     io_lib:format("~2B:~2.10.0B:~2.10.0B", [Hour, Min, Sec]).
@@ -147,7 +93,8 @@ loop(Pids, Gen, RunTime, NLoops) ->
 
     %% Ask all chroms to evaluate
     Ref = make_ref(),
-    [Pid ! {Ref, evaluate} || Pid <- Pids],
+    Self = self(),
+    [Pid ! {Self, Ref, evaluate} || Pid <- Pids],
 
     %% Receive evaluations
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
@@ -164,7 +111,7 @@ loop(Pids, Gen, RunTime, NLoops) ->
     io:format("~n[*] Generation: ~p, ~p individuals evaluated~n", [Gen, Gen*?POP_SIZE]),
     io:format("[i] ~p processes~n~n", [length(processes())]),
     io:format("[*] Top ~p:~n", [?TOP]),
-    [display(T) || T <- Top],
+    [chrom:display(T) || T <- Top],
     io:format("~n", []),
 
     case do_stop() of
@@ -192,7 +139,7 @@ restart(Gen, RunTime, NLoops, Results, Start) ->
     {Winners, Losers} = lists:split(?H_POP_SIZE, Results),
 
     %% Kill losers
-    [LoserPid ! die || {LoserPid, _Score} <- Losers],
+    [chrom:delete(LoserPid) || {LoserPid, _Score} <- Losers],
 
     %% Compute score of all the winners
     SumScores = sum_scores(Winners),
@@ -286,8 +233,8 @@ mate(Pid, Ref, Parent1, Parent2) ->
 			   1 ->
 			       xover2(Parents)
 		       end,
-    Pid1 = new_chrom(Child1),
-    Pid2 = new_chrom(Child2),
+    Pid1 = chrom:new(Child1),
+    Pid2 = chrom:new(Child2),
     maybe_mutate(Pid1),
     maybe_mutate(Pid2),
     Pid ! {Ref, [Pid1, Pid2]}.
@@ -348,106 +295,7 @@ mutate(Pid) ->
     Pid ! {mutate, Mutation}.
 
 
-chrom() ->
-    C = create(),
-    chrom(C, undefined).
 
-chrom(C, Score) ->
-    receive
-	%% when needed
-	{Pid, Ref, get} ->
-	    Pid ! {Ref, C},
-	    chrom(C, Score);
-
-	{Ref, evaluate} when Score =:= undefined ->
-	    S = capello:check(C),
-	    %% TODO/WIP we don't return C anymore
-	    %% ?SERVER ! {Ref, {self(), C, S}},
-	    ?SERVER ! {Ref, {self(), S}},
-	    chrom(C, S);
-
-	{Ref, evaluate} ->
-	    %% TODO/WIP we don't return C anymore
-	    %% ?SERVER ! {Ref, {self(), C, Score}},
-	    ?SERVER ! {Ref, {self(), Score}},
-	    chrom(C, Score);
-
-	{mutate, 0} ->
-	    NewC = mut_reverse(C),
-	    chrom(NewC, undefined);
-
-	{mutate, 1} ->
-	    NewC = mut_split_swap(C),
-	    chrom(NewC, undefined);
-
-	{mutate, 2} ->
-	    NewC = mut_randomize_full(),
-	    chrom(NewC, undefined);
-
-	{mutate, 3} ->
-	    NewC = mut_randomize_one(C),
-	    chrom(NewC, undefined);
-
-	{mutate, 4} ->
-	    NewC = mut_swap_two_genes(C),
-	    chrom(NewC, undefined);
-
-	{mutate, 5} ->
-	    NewC = mut_shift(C),
-	    chrom(NewC, undefined);
-
-	die ->
-	    %% io:format("[i] ~p exiting~n", [self()]),
-	    ok;
-
-	_Other ->
-	    io:format("[?] Oups got other message: ~p~n", [_Other])
-    end.
-
-
-%%
-%% generate a random chromosome
-%%
-to_char(X) ->
-    $a + (X rem 26).
-
-create() ->
-    %% random().
-    %% full_random().
-    Chrom = random(),
-
-    %% FIXME si on utilise le hint on ne checkera qu'un seul
-    %% mot de 3 lettres dont on connait deja 2 caracteres: "?on"
-    %% solution: utiliser capello:three/1 si on n'utilise pas le hint
-    case capello:three(Chrom) of
-	true ->
-	    Chrom;
-	false ->
-	    create()
-    end.
-
--ifdef(USE_HINT).
-random() ->
-    random(?ALPHABET_SIZE-?HINT_LENGTH, ?HINT, 26-?HINT_LENGTH, lists:seq($a, $z) -- ?HINT).
--else.
-random() ->
-    random(?ALPHABET_SIZE, [], 26, lists:seq($a, $z)).
--endif.
-
-random(0, Acc, _N, _S) ->
-    list_to_tuple(lists:reverse(Acc));
-random(Size, Acc, N, Chars) ->
-    Pos = crypto:rand_uniform(0, N) + 1,
-    Elem = lists:nth(Pos, Chars),
-    NewChars = Chars -- [Elem],
-    random(Size-1, [Elem|Acc], N-1, NewChars).
-
-full_random() ->
-    %% TODO un binary comprehension
-    Bin = crypto:rand_bytes(?ALPHABET_SIZE),
-    L1 = binary_to_list(Bin),
-    L2 = [to_char(C) || C <- L1],
-    list_to_tuple(L2).
 
 
 t2b(X) ->
@@ -455,10 +303,6 @@ t2b(X) ->
 
 b2t(X) ->
     list_to_tuple(binary_to_list(X)).
-
-%% pretty print a chromosome
-pp(X) ->
-    tuple_to_list(X).
 
 
 %%
@@ -505,87 +349,22 @@ xover2({C1, C2}) ->
     {Child1, Child2}.
 
 
-test() ->
-    {P1, P2} = T1 = {create(), create()},
-    io:format("Parent1: ~p~n", [pp(P1)]),
-    io:format("Parent2: ~p~n", [pp(P2)]),
+test_xover1() ->
+    {P1, P2} = T1 = {chrom:new(), chrom:new()},
+    io:format("Parent1: ~p~n", [?PP(P1)]),
+    io:format("Parent2: ~p~n", [?PP(P2)]),
     {C1, C2} = xover1(T1),
-    io:format("Child1:  ~p~n", [pp(C1)]),
-    io:format("Child2:  ~p~n", [pp(C2)]).
+    io:format("Child1:  ~p~n", [?PP(C1)]),
+    io:format("Child2:  ~p~n", [?PP(C2)]).
 
 
-test2() ->
-    {P1, P2} = T1 = {create(), create()},
-    io:format("Parent1: ~p~n", [pp(P1)]),
-    io:format("Parent2: ~p~n", [pp(P2)]),
+test_xover2() ->
+    {P1, P2} = T1 = {chrom:new(), chrom:new()},
+    io:format("Parent1: ~p~n", [?PP(P1)]),
+    io:format("Parent2: ~p~n", [?PP(P2)]),
     {C1, C2} = xover2(T1),
-    io:format("Child1:  ~p~n", [pp(C1)]),
-    io:format("Child2:  ~p~n", [pp(C2)]).
-
-%%
-%% Mutations
-%%
-
-%% -define(MUT(F,A), io:format(F, A)).
--define(MUT(F,A), io:format(".", [])).
-
-%% 1. Reverse chromosome
-mut_reverse(C) ->
-    New = list_to_tuple(lists:reverse(tuple_to_list(C))),
-    ?MUT("[m] Reverse chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
-    New.
-
-%% 2. Split in two then swap
-mut_split_swap(C) ->
-    {Left, Right} = lists:split(?H_ALPHABET_SIZE, tuple_to_list(C)),
-    New = list_to_tuple(Right ++ Left),
-    ?MUT("[m] Split/Swap chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
-    New.
-
-%% 3. Randomize full
-mut_randomize_full() ->
-    C = create(),
-    ?MUT("[m] Randomize chromosome full: ~p~n", [pp(C)]),
-    C.
-
-%% 4. Randomize only one char
-mut_randomize_one(C) ->
-    Position = crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1,
-    <<NewChar>> = crypto:rand_bytes(1),
-    Char = to_char(NewChar),
-    New = setelement(Position, C, Char),
-    ?MUT("[m] Randomize chromosome one at pos ~p: ~p -> ~p~n",
-	 [Position, pp(C), pp(New)]),
-    New.
-
-%% 5. Swap two characters
-mut_swap_two_genes(C) ->
-    {Position1, Position2} = random2(),
-    Char1 = element(Position1, C),
-    Char2 = element(Position2, C),
-    Tmp = setelement(Position1, C, Char2),
-    New = setelement(Position2, Tmp, Char1),
-    ?MUT("[m] Swap two genes at pos ~p/~p: ~p -> ~p~n",
-	 [Position1, Position2, pp(C), pp(New)]),
-    New.
-
-%% 6. Shift a chromosome
-mut_shift(C) ->
-    [H|T] = tuple_to_list(C),
-    New = list_to_tuple(T++[H]),
-    ?MUT("[m] Shift chromosome: ~p -> ~p~n", [pp(C), pp(New)]),
-    New.
-
-
-test_mut_swap_two_genes() ->
-    C = create(),
-    N = mut_swap_two_genes(C),
-    ?PUTSTR(?H1),
-    ?PUTSTR(?H2),
-    ?PUTSTR(pp(C)),
-    ?PUTSTR(?HR),
-    ?PUTSTR(pp(N)),
-    ok.
+    io:format("Child1:  ~p~n", [?PP(C1)]),
+    io:format("Child2:  ~p~n", [?PP(C2)]).
 
 
 split(String, Pos, Delim) ->
@@ -602,24 +381,3 @@ h2(Pos) ->
     io:format("~s~n", [split(?H2, Pos, $|)]).
 hl(Pos) ->
     io:format("~s~n", [split(?HR, Pos, $-)]).
-
-
-%% TODO move to utils.erl
-
-%%
-%% take 2 random -different- integers in [1..?ALPHABET_SIZE]
-%%
-rnd_pos() ->
-    crypto:rand_uniform(0, ?ALPHABET_SIZE) + 1.
-
-random2() ->
-    Rnd1 = rnd_pos(),
-    random2(Rnd1).
-random2(Rnd1) ->
-    Rnd2 = rnd_pos(),
-    if
-	Rnd1 =:= Rnd2 ->
-	    random2(Rnd1);
-	true ->
-	    {Rnd1, Rnd2}
-    end.
