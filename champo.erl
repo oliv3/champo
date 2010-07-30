@@ -31,7 +31,7 @@
 %%
 
 %% GA parameters
--define(POP_SIZE, 1000). %%1000).
+-define(POP_SIZE, 2000).
 
 %% Mutations
 -define(P_MUTATION, 10).
@@ -44,7 +44,7 @@
 
 -define(SERVER, ?MODULE).
 
--define(TOP, 20). %% Top N display
+-define(TOP, 10). %% Top N display
 
 
 pid() ->
