@@ -128,8 +128,7 @@ dict_load(File) ->
     {ok, B} = file:read_file(File),
     L = binary_to_list(B),
     L2 = string:tokens(L, [10, 13, $-, $', $ ]),
-    L3 = menache(L2),
-    build_ets(L3).
+    build_ets(L2).
 
 build_ets(Words) ->
     Tid = ets:new(words, [set, named_table]),
@@ -142,14 +141,12 @@ insert([Word|Words], Tid, Three) when length(Word) =:= 3->
     true = ets:insert(Tid, {Word}),
     true = ets:insert(Three, {Word}),
     insert(Words, Tid, Three);
-insert([Word|Words], Tid, Three) ->
+insert([Word|Words], Tid, Three) when length(Word) >= 2 andalso length(Word) =< ?MAX_WORD_LENGTH ->
     true = ets:insert(Tid, {Word}),
+    insert(Words, Tid, Three);
+insert([_Word|Words], Tid, Three) ->
     insert(Words, Tid, Three).
 
-%% menache dans le dictionnaire, on ne garde
-%% que les mots de taille >= 2 et <= ?MAX_WORD_LENGTH
-menache(Words) ->
-    [Str || Str <- Words, length(Str) >= 2 andalso length(Str) =< ?MAX_WORD_LENGTH].
 
 %% translate a word to french
 translate(Word, Chrom) ->
