@@ -17,7 +17,8 @@ new() ->
     Alpha = create(),
     new(Alpha).
 
-
+new({Alpha, Score}) ->
+    spawn_link(?MODULE, loop, [Alpha, Score]);
 new(Alpha) ->
     spawn_link(?MODULE, loop, [Alpha, undefined]).
 
@@ -27,13 +28,9 @@ delete(Pid) ->
 
 
 get(Pid) ->
-    %% TODO noneed Ref
     S = self(),
-    %% Ref = make_ref(),
-    %% Pid ! {S, Ref, get},
     Pid ! {S, get},
     receive
-	%% {Ref, Alpha} ->
 	{value, Alpha} ->
 	    Alpha
     end.
@@ -47,9 +44,7 @@ display({Pid, Score}) ->
 
 loop(Alpha, Score) ->
     receive
-	%% {Pid, Ref, get} ->
 	{Pid, get} ->
-	    %% Pid ! {Ref, Alpha},
 	    Pid ! {value, Alpha},
 	    loop(Alpha, Score);
 

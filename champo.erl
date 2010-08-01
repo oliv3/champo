@@ -25,7 +25,7 @@
 %% => 141167095653376 si on prend l'indice "amon" (26^10).
 
 %% GA parameters
--define(POP_SIZE, 1000).
+-define(POP_SIZE, 20).
 
 %% Cross-over et mutations
 -define(P_XOVER, 80).    %% 80%
@@ -198,18 +198,18 @@ new_population(N, Population, MaxScore) ->
 new_population(0, _Population, _MaxScore, Acc) ->
     Acc;
 new_population(N, Population, MaxScore, Acc) ->
-    {Parent1, _S1} = roulette(Population, MaxScore, undefined),
-    {Parent2, _S2} = roulette(Population, MaxScore, Parent1),
+    Parent1 = roulette(Population, MaxScore, undefined),
+    Parent2 = roulette(Population, MaxScore, Parent1),
     Ref = make_ref(),
     V = self(),
     spawn(fun() -> (?MODULE):mate(V, Ref, Parent1, Parent2) end),
     new_population(N-1, Population, MaxScore, [Ref | Acc]).
 
-mate(Pid, Ref, Parent1, Parent2) ->
+mate(Pid, Ref, {Alpha1, _Score1} = Parent1, {Alpha2, _Score2} = Parent2) ->
     P = random:uniform() * 100,
     if
 	P =< ?P_XOVER ->
-	    xover(Pid, Ref, Parent1, Parent2);
+	    xover(Pid, Ref, Alpha1, Alpha2);
 	true ->
 	    C1 = chrom:new(Parent1),
 	    C2 = chrom:new(Parent2),
