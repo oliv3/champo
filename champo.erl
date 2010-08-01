@@ -24,17 +24,12 @@
 %%
 %% => 141167095653376 si on prend l'indice "amon" (26^10).
 
-%%
-%% save/load d'une population (liste de chroms dans un binary term)
-%%
-%% module "config"
-%%
-
 %% GA parameters
--define(POP_SIZE, 2000).
+-define(POP_SIZE, 1000).
 
-%% Mutations
--define(P_MUTATION, 10).
+%% Cross-over et mutations
+-define(P_XOVER, 80).    %% 80%
+-define(P_MUTATION, 10). %% une chance sur 10
 
 %% CPU cooling pauses
 -define(TOS, 3). %% seconds
@@ -96,13 +91,14 @@ loop(Pids, Gen, RunTime, NLoops) ->
     %% Ask all chroms to evaluate
     Ref = make_ref(),
     Self = self(),
+    %% io:format("[i] Evaluating ~p~n", [Pids]),
     [Pid ! {Self, Ref, evaluate} || Pid <- Pids],
 
     %% Receive evaluations
     Evaluations = [receive_result(Ref) || _Pid <- Pids],
+    %% io:format("Evals: ~p~n", [Evaluations]),
 
     %% Inverse scores
-    %% io:format("Evals: ~p~n", [Evaluations]),
     NegEvals = [neg_score(E) || E <- Evaluations],
 
     %% Sort by best score descending
@@ -136,23 +132,20 @@ receive_refs([Ref|Refs], Acc) ->
     end.
 
 restart(Gen, RunTime, NLoops, Results, Start) ->
-    %% Divide poulation in two
-    %% TODO ? garder 25% et regénérer 75% ?
-    {Winners, Losers} = lists:split(?H_POP_SIZE, Results),
+    %% io:format("[i] Results: ~p~n", [Results]),
 
-    %% Kill losers
-    [chrom:delete(LoserPid) || {LoserPid, _Score} <- Losers],
-
-    %% Compute score of all the winners
-    SumScores = sum_scores(Winners),
+    %% Compute population score
+    SumScores = sum_scores(Results),
 
     %% Create new population
-    Refs = new_population(?H_POP_SIZE, Winners, SumScores),
+    Refs = new_population(?H_POP_SIZE, Results, SumScores),
     ChildrenPids = receive_refs(Refs),
     %% io:format("[i] ChildrenPids: ~p~n", [ChildrenPids]),
-    WinnersPids = [Pid || {Pid, _Score} <- Winners],
-    NewPids = lists:flatten([WinnersPids|ChildrenPids]),
+    NewPids = lists:flatten(ChildrenPids),
     %% io:format("[i] NewPids: ~p~n", [NewPids]),
+
+    %% Kill old population
+    [chrom:delete(Pid) || {Pid, _Score} <- Results],
 
     %% Stats
     Now = now(),
@@ -210,9 +203,20 @@ new_population(N, Population, MaxScore, Acc) ->
     Ref = make_ref(),
     V = self(),
     spawn(fun() -> (?MODULE):mate(V, Ref, Parent1, Parent2) end),
-    new_population(N-2, Population, MaxScore, [Ref | Acc]).
+    new_population(N-1, Population, MaxScore, [Ref | Acc]).
 
 mate(Pid, Ref, Parent1, Parent2) ->
+    P = random:uniform() * 100,
+    if
+	P =< ?P_XOVER ->
+	    xover(Pid, Ref, Parent1, Parent2);
+	true ->
+	    C1 = chrom:new(Parent1),
+	    C2 = chrom:new(Parent2),
+	    Pid ! {Ref, [C1, C2]}
+    end.
+
+xover(Pid, Ref, Parent1, Parent2) ->
     {_, _, MS} = now(),
     Chrom1 = chrom:get(Parent1),
     Chrom2 = chrom:get(Parent2),
